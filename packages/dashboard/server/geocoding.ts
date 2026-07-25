@@ -39,6 +39,58 @@ export function haversineDistance(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/**
+ * 행정구역 시도 명칭을 표준 명칭으로 정규화
+ */
+function normalizeSido(sido: string): string {
+  if (!sido) return "";
+  if (sido.startsWith("서울")) return "서울특별시";
+  if (sido.startsWith("부산")) return "부산광역시";
+  if (sido.startsWith("대구")) return "대구광역시";
+  if (sido.startsWith("인천")) return "인천광역시";
+  if (sido.startsWith("광주")) return "광주광역시";
+  if (sido.startsWith("대전")) return "대전광역시";
+  if (sido.startsWith("울산")) return "울산광역시";
+  if (sido.startsWith("세종")) return "세종특별자치시";
+  if (sido.startsWith("경기")) return "경기도";
+  if (sido.startsWith("강원")) return "강원특별자치도";
+  if (sido.startsWith("충북") || sido.includes("충청북도")) return "충청북도";
+  if (sido.startsWith("충남") || sido.includes("충청남도")) return "충청남도";
+  if (sido.startsWith("전북") || sido.includes("전라북도") || sido.includes("전북특별자치도")) return "전북특별자치도";
+  if (sido.startsWith("전남") || sido.includes("전라남도")) return "전라남도";
+  if (sido.startsWith("경북") || sido.includes("경상북도")) return "경상북도";
+  if (sido.startsWith("경남") || sido.includes("경상남도")) return "경상남도";
+  if (sido.startsWith("제주")) return "제주특별자치도";
+  return sido;
+}
+
+/**
+ * 지하철역 검색 주소와 DB 지역 표기명이 일치하는지 판별
+ */
+function isAddressMatch(stationAddress: string, regionDisplayName: string): boolean {
+  const stationParts = stationAddress.split(/\s+/).filter(Boolean);
+  const regionParts = regionDisplayName.split(/\s+/).filter(Boolean);
+
+  if (regionParts.length === 0) return false;
+  if (stationParts.length < regionParts.length) return false;
+
+  for (let i = 0; i < regionParts.length; i++) {
+    const sPart = stationParts[i];
+    const rPart = regionParts[i];
+
+    if (i === 0) {
+      if (normalizeSido(sPart) !== normalizeSido(rPart)) {
+        return false;
+      }
+    } else {
+      if (sPart !== rPart && !sPart.includes(rPart) && !rPart.includes(sPart)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 // ──────────────────────────────────────────────────
 // 카카오 REST API Geocoding
 // ──────────────────────────────────────────────────
@@ -393,7 +445,7 @@ export async function findComplexesNearStation(
       const { getAllDbRegions } = await import("@myhome/shared");
       const regions = await getAllDbRegions();
       const matchedRegion = regions
-        .filter((r) => stationCoords.address!.includes(r.displayName))
+        .filter((r) => isAddressMatch(stationCoords.address!, r.displayName))
         .sort((a, b) => b.displayName.length - a.displayName.length)[0];
       
       if (matchedRegion) {
@@ -480,6 +532,15 @@ export async function findComplexesNearStation(
       const dbComplexesInRegion = (await searchComplexNames("", targetLawdCode)).map((c: any) => c.name);
       const dbComplexSet = new Set(dbComplexesInRegion);
 
+      // 이미 로컬 DB에 좌표가 확보된 전체 단지들을 Map 캐시로 구축
+      const coordMap = new Map<string, { lat: number; lng: number }>();
+      for (const c of geocodedComplexes) {
+        coordMap.set(`${c.lawdCode}_${c.name}`, { lat: c.lat, lng: c.lng });
+      }
+
+      let newGeocodeCount = 0;
+      const MAX_NEW_GEOCODE_LIMIT = 15; // 1회 요청 시 외부 API Geocoding 최대 시도 횟수 제한
+
       for (const live of liveList) {
         const hasDbData = dbComplexSet.has(live.name);
 
@@ -490,30 +551,53 @@ export async function findComplexesNearStation(
           continue;
         }
 
-        // 좌표 확보 시도 (카카오 geocoding)
         let lat: number | null = null;
         let lng: number | null = null;
         let distanceM: number | null = null;
 
-        const regionName = stationCoords.address?.split(" ").slice(0, 2).join(" ") ?? stationName;
-        const query = live.dongName && live.jibun
-          ? `${regionName} ${live.dongName} ${live.jibun}`
-          : live.dongName
-          ? `${regionName} ${live.dongName}`
-          : `${regionName} ${live.name.replace(/\(.*?\)/g, "").trim()}`;
+        // DB 캐시 확인
+        const dbCoords = coordMap.get(`${targetLawdCode}_${live.name}`);
 
-        const geoResult = await geocodeAddress(query);
-        if (geoResult) {
-          lat = geoResult.lat;
-          lng = geoResult.lng;
+        if (dbCoords) {
+          lat = dbCoords.lat;
+          lng = dbCoords.lng;
           const dist = haversineDistance(stationCoords.lat, stationCoords.lng, lat, lng);
           distanceM = Math.round(dist);
 
           // 반경 초과 시 건너뜀
           if (dist > radiusM) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
             continue;
           }
+        } else {
+          // 좌표가 없고 외부 API 제한에 도달한 경우 건너뜀
+          if (newGeocodeCount >= MAX_NEW_GEOCODE_LIMIT) {
+            continue;
+          }
+
+          // 좌표 확보 시도 (카카오 geocoding)
+          const regionName = stationCoords.address?.split(" ").slice(0, 2).join(" ") ?? stationName;
+          const query = live.dongName && live.jibun
+            ? `${regionName} ${live.dongName} ${live.jibun}`
+            : live.dongName
+            ? `${regionName} ${live.dongName}`
+            : `${regionName} ${live.name.replace(/\(.*?\)/g, "").trim()}`;
+
+          newGeocodeCount++;
+          const geoResult = await geocodeAddress(query);
+          if (geoResult) {
+            lat = geoResult.lat;
+            lng = geoResult.lng;
+            const dist = haversineDistance(stationCoords.lat, stationCoords.lng, lat, lng);
+            distanceM = Math.round(dist);
+
+            // 반경 초과 시 건너뜀
+            if (dist > radiusM) {
+              await new Promise((resolve) => setTimeout(resolve, 100));
+              continue;
+            }
+          }
+          // Rate Limit 방지
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
 
         liveComplexes.push({
@@ -527,9 +611,6 @@ export async function findComplexesNearStation(
           jibun: live.jibun,
           hasDbData,
         });
-
-        // Rate Limit 방지
-        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
       // 거리순 정렬 (좌표 없는 단지는 뒤로)
