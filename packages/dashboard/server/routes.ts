@@ -17,6 +17,8 @@ export type GraphFilter = {
 };
 import type { BatchUpsertItem } from "@myhome/shared";
 import { adminRequired } from "./authRoutes.js";
+import { graphCache } from "./cache.js";
+
 
 const comparisonValues: ComparisonCriteria[] = ["none", "parking", "large_complex", "transit", "newer", "livability"];
 
@@ -380,9 +382,14 @@ export function createRouter() {
           };
         });
         // 전체를 단일 트랜잭션으로 묶어 HDD fsync 병목 해소 (N번→1번)
-        upsertTransactionBatch(regionInfo, batchItems).catch((err: any) =>
-          console.error(`[graphDb] 탐색 배치 upsert 실패 (${records.length}건):`, err)
-        );
+        upsertTransactionBatch(regionInfo, batchItems)
+          .then(() => {
+            console.log(`[graphDb] 탐색 배치 upsert 완료 (${records.length}건) -> 캐시 초기화`);
+            graphCache.clear();
+          })
+          .catch((err: any) =>
+            console.error(`[graphDb] 탐색 배치 upsert 실패 (${records.length}건):`, err)
+          );
       }
     } catch (error) {
       next(error);

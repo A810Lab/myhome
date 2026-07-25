@@ -46,6 +46,8 @@ import { readPresets, savePreset, deletePreset } from "./graphPresets.js";
 import { readInsights, saveInsight, deleteInsight } from "./graphInsights.js";
 import { findComplexesNearStation, batchGeocodeComplexes, geocodeAddress, findSubwayStationsNearCoords } from "./geocoding.js";
 import { generateTextWithGemini } from "./llmClient.js";
+import { graphCache } from "./cache.js";
+
 
 
 export function createGraphRouter(): Router {
@@ -64,7 +66,14 @@ export function createGraphRouter(): Router {
   /** GET /api/graph/regions-summary — DB 수집 지역별 요약 통계 */
   router.get("/regions-summary", async (_req, res) => {
     try {
+      const cacheKey = "regions-summary";
+      const cached = graphCache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
       const summary = await getDbRegionsSummary();
+      graphCache.set(cacheKey, summary);
       res.json(summary);
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
@@ -80,6 +89,7 @@ export function createGraphRouter(): Router {
         return;
       }
       await insertDbRegion(lawdCode, displayName);
+      graphCache.clear(); // 신규 지역 추가 시 캐시 클리어
       res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
@@ -90,7 +100,14 @@ export function createGraphRouter(): Router {
   router.get("/region-complexes", async (req, res) => {
     try {
       const lawdCode = req.query.lawdCode as string | undefined;
+      const cacheKey = `region-complexes:${lawdCode ?? ""}`;
+      const cached = graphCache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
       const complexes = await getComplexesByRegion(lawdCode);
+      graphCache.set(cacheKey, complexes);
       res.json(complexes);
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
@@ -100,7 +117,14 @@ export function createGraphRouter(): Router {
   /** GET /api/graph/stats — 전체 노드 수 통계 */
   router.get("/stats", async (_req, res) => {
     try {
+      const cacheKey = "stats";
+      const cached = graphCache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
       const stats = await getGraphStats();
+      graphCache.set(cacheKey, stats);
       res.json(stats);
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
@@ -128,8 +152,16 @@ export function createGraphRouter(): Router {
     try {
       const complexName = decodeURIComponent(req.params.name);
       const lawdCode = req.query.lawdCode as string | undefined;
+      const cacheKey = `trend:complex:${complexName}:${lawdCode ?? ""}`;
+      const cached = graphCache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
       const trend = await getComplexTrend(complexName, lawdCode);
-      res.json({ complexName, lawdCode, trend });
+      const result = { complexName, lawdCode, trend };
+      graphCache.set(cacheKey, result);
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
     }
@@ -139,8 +171,16 @@ export function createGraphRouter(): Router {
   router.get("/region/:lawdCode/trend", async (req, res) => {
     try {
       const { lawdCode } = req.params;
+      const cacheKey = `trend:region:${lawdCode}`;
+      const cached = graphCache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
       const trend = await getRegionTrend(lawdCode);
-      res.json({ lawdCode, trend });
+      const result = { lawdCode, trend };
+      graphCache.set(cacheKey, result);
+      res.json(result);
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
     }
@@ -167,7 +207,16 @@ export function createGraphRouter(): Router {
         minArea: req.query.minArea ? Number(req.query.minArea) : undefined,
         maxArea: req.query.maxArea ? Number(req.query.maxArea) : undefined,
       };
+
+      const cacheKey = `search:${JSON.stringify(filter)}`;
+      const cached = graphCache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
+
       const results = await searchTransactions(filter);
+      graphCache.set(cacheKey, results);
       res.json(results);
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
@@ -178,7 +227,14 @@ export function createGraphRouter(): Router {
   router.get("/drilldown/regions", async (req, res) => {
     try {
       const complexName = req.query.complexName as string | undefined;
+      const cacheKey = `drilldown:regions:${complexName ?? ""}`;
+      const cached = graphCache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
       const data = await getDrilldownRegions(complexName);
+      graphCache.set(cacheKey, data);
       res.json(data);
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
@@ -194,7 +250,14 @@ export function createGraphRouter(): Router {
         res.status(400).json({ error: "lawdCode 파라미터가 누락되었습니다." });
         return;
       }
+      const cacheKey = `drilldown:complexes:${lawdCode}:${complexName ?? ""}`;
+      const cached = graphCache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
       const data = await getDrilldownComplexes(lawdCode, complexName);
+      graphCache.set(cacheKey, data);
       res.json(data);
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
@@ -210,7 +273,14 @@ export function createGraphRouter(): Router {
         res.status(400).json({ error: "complex 파라미터가 누락되었습니다." });
         return;
       }
+      const cacheKey = `drilldown:areas:${complexName}:${lawdCode ?? ""}`;
+      const cached = graphCache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
       const data = await getDrilldownAreas(complexName, lawdCode);
+      graphCache.set(cacheKey, data);
       res.json(data);
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
@@ -239,6 +309,14 @@ export function createGraphRouter(): Router {
       const complexName = decodeURIComponent(req.params.name);
       const lawdCode = req.query.lawdCode as string | undefined;
       const area = req.query.area ? Number(req.query.area) : undefined;
+
+      const cacheKey = `detail:${complexName}:${lawdCode ?? ""}:${area ?? ""}`;
+      const cached = graphCache.get(cacheKey);
+      if (cached) {
+        res.json(cached);
+        return;
+      }
+
       const data = await getComplexDetail(complexName, lawdCode, area);
 
       // 단지 지리정보 조회 및 지하철역 연동
@@ -273,11 +351,13 @@ export function createGraphRouter(): Router {
         }
       }
 
-      res.json({
+      const resultPayload = {
         ...data,
         complexInfo,
         subways
-      });
+      };
+      graphCache.set(cacheKey, resultPayload);
+      res.json(resultPayload);
     } catch (err: any) {
       res.status(500).json({ error: err?.message ?? "내부 오류" });
     }
@@ -704,6 +784,8 @@ ${contextText}
       console.log(
         `[complex-fetch] ${complexName} 완료: ${insertedTotal}건 적재 (${apiFetchMonths.length}개월 API 호출)`
       );
+
+      graphCache.clear(); // 데이터 추가 완료 후 캐시 전체 무효화
 
       res.json({
         ok: true,

@@ -6,6 +6,8 @@ import { normalizeTransaction, recentMonths } from "./transactions.js";
 import type { RuleCheckOutcome, TransactionMatch, WatchRule } from "./types.js";
 import { SOURCE_LIMIT_NOTICE } from "./constants.js";
 import { upsertTransaction, makeGraphDedupeKey, getUserSettings } from "@myhome/shared";
+import { graphCache } from "./cache.js";
+
 
 /** 실거래 신고는 계약 후 최대 한달까지 지연될 수 있어 이번달+지난달을 같이 확인한다. */
 const TRACKED_MONTHS = 2;
@@ -85,6 +87,7 @@ export async function runRuleCheck(rule: WatchRule): Promise<RuleCheckOutcome> {
   // 그래프 DB 적재 — GRAPH_DB_ENABLED=true일 때만, 오류가 나도 기존 흐름에 영향 없음
   if (process.env.GRAPH_DB_ENABLED === "true") {
     const regionInfo = { lawdCode: region.lawdCode, displayName: region.displayName ?? rule.regionName };
+    let hasUpserted = false;
     for (const match of matches) {
       const graphKey = makeGraphDedupeKey(
         region.lawdCode, match.apartmentName, match.dealDate, match.areaM2, match.floor
@@ -97,9 +100,14 @@ export async function runRuleCheck(rule: WatchRule): Promise<RuleCheckOutcome> {
           areaM2:    match.areaM2,
           floor:     match.floor,
         });
+        hasUpserted = true;
       } catch (err) {
         console.error(`[graphDb] upsert 실패 (${match.apartmentName} / ${match.dealDate}):`, err);
       }
+    }
+    if (hasUpserted) {
+      console.log(`[ruleEngine] New transactions upserted to SQLite for rule ${rule.name}. Invalidating graph cache.`);
+      graphCache.clear();
     }
   }
 

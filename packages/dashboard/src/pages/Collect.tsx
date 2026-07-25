@@ -321,47 +321,49 @@ export function CollectPage() {
             title={selectedDate ? `${selectedDate} ${viewType === "daily" ? t.selectedDateStats : t.selectedMonthStats}` : (viewType === "daily" ? t.selectedDateStats : t.selectedMonthStats)}
             right={<ClipboardList size={16} className="text-neutral" />}
           >
-            {loadingRegion ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
-                <span className="text-xs text-neutral mt-2">{t.loading}</span>
-              </div>
-            ) : errorRegion ? (
-              <div className="text-center py-10 text-red-500 text-xs">{errorRegion}</div>
-            ) : !selectedDate ? (
-              <div className="text-center py-12 text-xs text-neutral">
-                {viewType === "daily" ? t.selectDatePrompt : t.selectMonthPrompt}
-              </div>
-            ) : regionData.length === 0 ? (
-              <div className="text-center py-12 text-xs text-neutral">
-                이 날짜의 지역별 수집 기록이 없습니다.
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                {regionData.map((item, idx) => (
-                  <div
-                    key={item.lawdCode}
-                    className="flex justify-between items-center py-2.5 px-3 bg-alternative hover:bg-normal-normal rounded-xl transition-colors border border-normal/30"
-                  >
-                    <div className="min-w-0 flex-1 pr-3">
-                      <div className="text-[13px] font-bold text-strong truncate flex items-center gap-1">
-                        <span className="text-[10px] text-assistive font-mono w-4 shrink-0">{idx + 1}</span>
-                        <MapPin size={11} className="text-neutral flex-shrink-0" />
-                        {item.regionName}
+            <div className="h-[340px] flex flex-col justify-between">
+              {loadingRegion ? (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+                  <span className="text-xs text-neutral mt-2">{t.loading}</span>
+                </div>
+              ) : errorRegion ? (
+                <div className="flex items-center justify-center h-full text-red-500 text-xs">{errorRegion}</div>
+              ) : !selectedDate ? (
+                <div className="flex items-center justify-center h-full text-xs text-neutral text-center">
+                  {viewType === "daily" ? t.selectDatePrompt : t.selectMonthPrompt}
+                </div>
+              ) : regionData.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-xs text-neutral">
+                  이 날짜의 지역별 수집 기록이 없습니다.
+                </div>
+              ) : (
+                <div className="space-y-2 h-full overflow-y-auto pr-1">
+                  {regionData.map((item, idx) => (
+                    <div
+                      key={item.lawdCode}
+                      className="flex justify-between items-center py-2.5 px-3 bg-alternative hover:bg-normal-normal rounded-xl transition-colors border border-normal/30"
+                    >
+                      <div className="min-w-0 flex-1 pr-3">
+                        <div className="text-[13px] font-bold text-strong truncate flex items-center gap-1">
+                          <span className="text-[10px] text-assistive font-mono w-4 shrink-0">{idx + 1}</span>
+                          <MapPin size={11} className="text-neutral flex-shrink-0" />
+                          {item.regionName}
+                        </div>
+                        <div className="text-[10px] text-neutral/70 font-mono mt-0.5 pl-4">
+                          {item.lawdCode}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-neutral/70 font-mono mt-0.5 pl-4">
-                        {item.lawdCode}
+                      <div className="flex-shrink-0 text-right">
+                        <span className="text-xs font-black font-mono text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full">
+                          {item.count.toLocaleString()}{t.unitCount}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex-shrink-0 text-right">
-                      <span className="text-xs font-black font-mono text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full">
-                        {item.count.toLocaleString()}{t.unitCount}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </SectionCard>
         </div>
       </div>

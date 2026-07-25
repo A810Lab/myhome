@@ -3,6 +3,8 @@ import { sendNotifications } from "./notifications.js";
 import { runCollector } from "@myhome/collector";
 import { getAllRules } from "@myhome/shared";
 import { batchGeocodeComplexes } from "./geocoding.js";
+import { graphCache } from "./cache.js";
+
 
 
 function isAlertDue(lastCheckedAt: string | undefined, alertTime: string | undefined): boolean {
@@ -51,6 +53,9 @@ export async function runDueCollector() {
       console.log("[Scheduler] Starting batch geocoding for new complexes...");
       const geoResult = await batchGeocodeComplexes();
       console.log(`[Scheduler] Batch geocoding finished: total ${geoResult.total}, success ${geoResult.success}, failed ${geoResult.failed}`);
+      
+      console.log("[Scheduler] Daily collection & geocoding completed. Invalidating graph cache.");
+      graphCache.clear();
     } catch (err: any) {
       console.error("[Scheduler] Daily collection or geocoding failed:", err.message);
       lastCollectedDate = ""; // 실패 시 다음 스케줄 검사 주기에서 재시도하도록 재설정

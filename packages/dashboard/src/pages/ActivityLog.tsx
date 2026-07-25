@@ -238,8 +238,8 @@ export function ActivityLogPage() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.15)" />
                     <XAxis dataKey="date" tickLine={false} axisLine={false} style={{ fontSize: 10, fill: "#94a3b8" }} />
-                    <YAxis yAxisId="left" tickLine={false} axisLine={false} style={{ fontSize: 10, fill: "#94a3b8" }} width={35} />
-                    <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} style={{ fontSize: 10, fill: "#94a3b8" }} width={30} />
+                    <YAxis yAxisId="left" tickLine={false} axisLine={false} style={{ fontSize: 10, fill: "#94a3b8" }} width={35} allowDecimals={false} />
+                    <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} style={{ fontSize: 10, fill: "#94a3b8" }} width={30} allowDecimals={false} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "rgba(255, 255, 255, 0.95)",

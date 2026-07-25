@@ -516,7 +516,7 @@ export function DatabaseAdminPage() {
       {/* 탭 1: SQL 탐색기 */}
       {activeTab === "sql" && (
         <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-          {/* 좌측: 스키마 브라우저 & 템플릿 */}
+          {/* 좌측: 스키마 브라우저 */}
           <div className="space-y-6">
             <SectionCard
               title={t.tablesList}
@@ -551,8 +551,8 @@ export function DatabaseAdminPage() {
                     </select>
                   </div>
 
-                  {/* 테이블 리스트 (데스크톱 대응) */}
-                  <div className="hidden lg:block space-y-1">
+                  {/* 테이블 리스트 (데스크톱 대응 - 종 스크롤 고정 높이 적용) */}
+                  <div className="hidden lg:block max-h-[260px] overflow-y-auto space-y-1 pr-1 border border-normal/20 rounded-lg p-1 bg-alternative/30">
                     {tables.map((tName) => (
                       <button
                         key={tName}
@@ -574,7 +574,7 @@ export function DatabaseAdminPage() {
                   {selectedTable && schemas[selectedTable] && (
                     <div className="border-t border-normal/50 pt-3 space-y-2">
                       <p className="text-[11px] font-bold text-assistive tracking-wide uppercase">{t.schemaInfo}: {selectedTable}</p>
-                      <div className="overflow-x-auto max-h-60 border border-normal rounded-lg">
+                      <div className="overflow-x-auto max-h-[220px] overflow-y-auto border border-normal rounded-lg bg-alternative/10">
                         <table className="w-full text-[11px] leading-normal">
                           <thead>
                             <tr className="bg-alternative/60 border-b border-normal text-left text-neutral">
@@ -599,41 +599,41 @@ export function DatabaseAdminPage() {
                 </div>
               )}
             </SectionCard>
-
-            {/* SQL 템플릿 카드 */}
-            <SectionCard title={t.sqlTemplate}>
-              <div className="space-y-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => injectTemplate("SELECT * FROM transactions LIMIT 20;")}
-                  className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-alternative hover:bg-alternative/80 text-strong font-semibold transition-colors"
-                >
-                  <FileText className="h-3.5 w-3.5 text-neutral shrink-0" />
-                  <span>최근 실거래 조회</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => injectTemplate("SELECT * FROM regions LIMIT 20;")}
-                  className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-alternative hover:bg-alternative/80 text-strong font-semibold transition-colors"
-                >
-                  <FileText className="h-3.5 w-3.5 text-neutral shrink-0" />
-                  <span>등록된 지역 조회</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => injectTemplate("SELECT * FROM complexes LIMIT 20;")}
-                  className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-alternative hover:bg-alternative/80 text-strong font-semibold transition-colors"
-                >
-                  <FileText className="h-3.5 w-3.5 text-neutral shrink-0" />
-                  <span>등록된 단지 조회</span>
-                </button>
-              </div>
-            </SectionCard>
           </div>
 
           {/* 우측: SQL 콘솔 & 실행 결과 */}
           <div className="space-y-6">
-            <SectionCard title="SQL 콘솔">
+            <SectionCard
+              title="SQL 콘솔"
+              right={
+                <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-end items-center">
+                  <button
+                    type="button"
+                    onClick={() => injectTemplate("SELECT * FROM transactions LIMIT 20;")}
+                    className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-alternative hover:bg-primary/10 hover:text-primary text-[9px] sm:text-[10px] font-bold text-strong transition-all border border-normal"
+                    title="최근 실거래 20건을 조회하는 SQL 템플릿을 입력합니다."
+                  >
+                    {isMobile ? "실거래" : "최근 실거래"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => injectTemplate("SELECT * FROM regions LIMIT 20;")}
+                    className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-alternative hover:bg-primary/10 hover:text-primary text-[9px] sm:text-[10px] font-bold text-strong transition-all border border-normal"
+                    title="등록된 수집 지역 목록을 조회하는 SQL 템플릿을 입력합니다."
+                  >
+                    {isMobile ? "지역" : "등록 지역"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => injectTemplate("SELECT * FROM complexes LIMIT 20;")}
+                    className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-alternative hover:bg-primary/10 hover:text-primary text-[9px] sm:text-[10px] font-bold text-strong transition-all border border-normal"
+                    title="등록된 단지 목록을 조회하는 SQL 템플릿을 입력합니다."
+                  >
+                    {isMobile ? "단지" : "등록 단지"}
+                  </button>
+                </div>
+              }
+            >
               <div className="space-y-4">
                 <div className="relative rounded-xl border border-normal bg-alternative/40 focus-within:border-primary overflow-hidden">
                   <textarea
@@ -741,7 +741,7 @@ export function DatabaseAdminPage() {
 
       {/* 탭 2: 위치/좌표 관리 */}
       {activeTab === "geocode" && (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-2 items-start">
           {/* Geocoding 좌표 캐싱 관리 */}
           <SectionCard
             title="Geocoding 좌표 캐싱 관리"
@@ -816,7 +816,7 @@ export function DatabaseAdminPage() {
                   <div className="flex justify-between items-center text-xs font-bold text-red-600">
                     <span>⚠️ 좌표 수집 실패 목록 ({batchProgress.failures.length}건)</span>
                   </div>
-                  <div className="overflow-y-auto max-h-40 border border-normal rounded bg-elevated text-[10px]">
+                  <div className="overflow-y-auto max-h-[140px] border border-normal rounded bg-elevated text-[10px]">
                     <table className="w-full text-left border-collapse border-spacing-0">
                       <thead>
                         <tr className="bg-alternative text-neutral border-b border-normal">
@@ -985,7 +985,7 @@ export function DatabaseAdminPage() {
 
       {/* 탭 3: 데이터 관리 */}
       {activeTab === "manage" && (
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-2xl mx-auto">
           <SectionCard title="데이터 관리 도구">
             <div className="space-y-4">
               <p className="text-xs text-neutral">
@@ -1111,18 +1111,21 @@ export function DatabaseAdminPage() {
                 </div>
               </div>
 
-              {/* 3. 전체 초기화 */}
-              <div className="flex items-center justify-between border-t border-normal/50 pt-3">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-bold text-red-500 flex items-center gap-1">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" /> 데이터베이스 전체 초기화
+              {/* 3. 전체 초기화 (Red Alert Box 형태로 강조 및 시각 정돈) */}
+              <div className="mt-4 p-4 rounded-xl border border-red-500/20 bg-red-500/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="space-y-1">
+                  <span className="text-xs font-black text-red-600 flex items-center gap-1.5 uppercase tracking-wide">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                    데이터베이스 전체 초기화 (위험)
                   </span>
-                  <p className="text-[10px] text-neutral">수집된 실거래 거래 목록 및 법정동 정보를 전부 삭제하고 디스크 용량을 최적화합니다.</p>
+                  <p className="text-[11px] text-neutral leading-normal">
+                    수집된 실거래 내역, 등록 단지 및 법정동 주소 정보가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                  </p>
                 </div>
                 <button
                   type="button"
                   onClick={handleClearDb}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 transition-all shadow-sm shadow-red-500/10 flex items-center gap-1.5 shrink-0"
+                  className="rounded-lg bg-red-600 hover:bg-red-700 px-4 py-2 text-xs font-bold text-white transition-all shadow-sm shadow-red-500/20 flex items-center justify-center gap-1.5 shrink-0"
                 >
                   전체 초기화
                 </button>

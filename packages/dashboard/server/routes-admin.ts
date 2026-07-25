@@ -1,5 +1,6 @@
 import express from "express";
 import { getDb } from "@myhome/shared";
+import { graphCache } from "./cache.js";
 
 export function createAdminRouter() {
   const router = express.Router();
@@ -41,6 +42,7 @@ export function createAdminRouter() {
       } else {
         const stmt = db.prepare(sql);
         const result = stmt.run();
+        graphCache.clear(); // 데이터 변경 쿼리 실행 시 캐시 초기화
         res.json({
           type: "write",
           changes: result.changes,
@@ -67,6 +69,7 @@ export function createAdminRouter() {
         db.prepare("PRAGMA foreign_keys = ON").run();
       }
       db.prepare("VACUUM").run();
+      graphCache.clear(); // 전체 초기화 시 캐시 초기화
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -93,6 +96,7 @@ export function createAdminRouter() {
       } finally {
         db.prepare("PRAGMA foreign_keys = ON").run();
       }
+      graphCache.clear(); // 특정 지역 데이터 삭제 시 캐시 초기화
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -116,6 +120,7 @@ export function createAdminRouter() {
       } finally {
         db.prepare("PRAGMA foreign_keys = ON").run();
       }
+      graphCache.clear(); // 특정 아파트 데이터 삭제 시 캐시 초기화
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
