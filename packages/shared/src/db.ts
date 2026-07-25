@@ -833,7 +833,7 @@ export async function searchComplexNames(
 ): Promise<ComplexSearchResult[]> {
   const db = getDb();
   let queryStr = `
-    SELECT DISTINCT c.name, c.lawd_code AS lawdCode, r.display_name AS regionName
+    SELECT DISTINCT c.id, c.name, c.lawd_code AS lawdCode, r.display_name AS regionName, c.lat, c.lng
     FROM complexes c
     JOIN regions r ON c.lawd_code = r.lawd_code
     WHERE c.name LIKE '%' || ? || '%'
@@ -847,9 +847,12 @@ export async function searchComplexNames(
 
   const rows = db.prepare(queryStr).all(...params);
   return rows.map((r: any) => ({
+    id: r.id,
     name: r.name,
     lawdCode: r.lawdCode,
     regionName: r.regionName,
+    lat: r.lat,
+    lng: r.lng,
   }));
 }
 

@@ -7,6 +7,7 @@ import { copy } from "../locales/ko";
 import { RegionSearchInput } from "../components/RegionSearchInput";
 import { classNames } from "../lib/format";
 import type { RegionSearchResult } from "../types";
+import { CoordPickerMap } from "../components/CoordPickerMap";
 
 const locale = "ko";
 const t = copy[locale];
@@ -330,6 +331,10 @@ export function DatabaseAdminPage() {
 
   const handleUpdateCoords = async () => {
     if (!selectedComplex) return;
+    if (!selectedComplex.id) {
+      alert("선택된 단지의 식별자(ID)가 누락되었습니다. 단지를 다시 검색하여 선택해 주세요.");
+      return;
+    }
     const latNum = parseFloat(editLat);
     const lngNum = parseFloat(editLng);
     if (isNaN(latNum) || isNaN(lngNum)) {
@@ -352,6 +357,10 @@ export function DatabaseAdminPage() {
 
   const handleResetCoords = async () => {
     if (!selectedComplex) return;
+    if (!selectedComplex.id) {
+      alert("선택된 단지의 식별자(ID)가 누락되었습니다. 단지를 다시 검색하여 선택해 주세요.");
+      return;
+    }
     if (!confirm(`'${selectedComplex.name}' 단지의 좌표를 초기화하고 다시 Geocoding 하도록 설정하시겠습니까?`)) return;
 
     setCoordsUpdating(true);
@@ -934,6 +943,18 @@ export function DatabaseAdminPage() {
 
                 {selectedComplex && (
                   <div className="mt-3 space-y-3 pt-3 border-t border-normal/50">
+                    <div className="mb-2">
+                      <CoordPickerMap
+                        lat={editLat && !isNaN(parseFloat(editLat)) ? parseFloat(editLat) : null}
+                        lng={editLng && !isNaN(parseFloat(editLng)) ? parseFloat(editLng) : null}
+                        regionName={selectedComplex.regionName || ""}
+                        complexName={selectedComplex.name}
+                        onSelectCoords={(lat, lng) => {
+                          setEditLat(String(lat));
+                          setEditLng(String(lng));
+                        }}
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[10px] font-bold text-neutral mb-1">위도 (Latitude)</label>

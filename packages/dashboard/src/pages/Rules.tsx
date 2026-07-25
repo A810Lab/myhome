@@ -158,7 +158,12 @@ function RuleForm({
       try {
         const apiResult = await getApartments(lawdCode);
         if (!cancelled) {
-          setComplexSearchResults(apiResult.apartments.map(name => ({ name, lawdCode, regionName: resolvedRegionName })));
+          setComplexSearchResults(apiResult.apartments.map(name => ({
+            id: `${lawdCode}|${name}`,
+            name,
+            lawdCode,
+            regionName: resolvedRegionName
+          })));
         }
       } catch (err) {
         console.error("[Rules] 단지 목록 로드 실패:", err);

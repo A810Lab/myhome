@@ -125,9 +125,12 @@ export type ApartmentListResponse = {
 };
 
 export type ComplexSearchResult = {
+  id: string;
   name: string;
   lawdCode: string;
   regionName: string;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 export interface UserActivityLog {

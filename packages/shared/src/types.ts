@@ -71,9 +71,12 @@ export type Insight = {
 };
 
 export interface ComplexSearchResult {
+  id: string;
   name: string;
   lawdCode: string;
   regionName: string;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface DailyCollectStat {
