@@ -225,7 +225,7 @@ export function ActivityLogPage() {
             ) : (
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={areaChartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                  <AreaChart data={areaChartData} margin={{ top: 10, right: 5, left: -10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorLogCount" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
@@ -238,7 +238,8 @@ export function ActivityLogPage() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.15)" />
                     <XAxis dataKey="date" tickLine={false} axisLine={false} style={{ fontSize: 10, fill: "#94a3b8" }} />
-                    <YAxis tickLine={false} axisLine={false} style={{ fontSize: 10, fill: "#94a3b8" }} />
+                    <YAxis yAxisId="left" tickLine={false} axisLine={false} style={{ fontSize: 10, fill: "#94a3b8" }} width={35} />
+                    <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} style={{ fontSize: 10, fill: "#94a3b8" }} width={30} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "rgba(255, 255, 255, 0.95)",
@@ -259,8 +260,8 @@ export function ActivityLogPage() {
                         </span>
                       )}
                     />
-                    <Area type="monotone" dataKey="logCount" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorLogCount)" name="활동량 (로그 수)" />
-                    <Area type="monotone" dataKey="userCount" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorUserCount)" name="액티브 사용자 (명)" />
+                    <Area yAxisId="left" type="monotone" dataKey="logCount" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorLogCount)" name="활동량 (로그 수)" />
+                    <Area yAxisId="right" type="monotone" dataKey="userCount" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorUserCount)" name="액티브 사용자 (명)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

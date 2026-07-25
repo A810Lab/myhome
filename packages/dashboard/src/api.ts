@@ -440,6 +440,20 @@ export function loadGeocodeStats() {
   return request<{ total: number; geocoded: number; pending: number }>("/api/graph/geocode-stats");
 }
 
+export function updateComplexCoords(complexId: string, lat: number, lng: number) {
+  return request<{ success: boolean }>("/api/complexes/coords", {
+    method: "PUT",
+    body: JSON.stringify({ complexId, lat, lng })
+  });
+}
+
+export function resetComplexCoords(complexId: string) {
+  return request<{ success: boolean }>("/api/complexes/coords/reset", {
+    method: "POST",
+    body: JSON.stringify({ complexId })
+  });
+}
+
 export function checkAuth() {
   return request<{ isAuthenticated: boolean; email?: string; isAdmin?: boolean }>("/api/auth/me");
 }

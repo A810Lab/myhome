@@ -8,7 +8,7 @@ import { getApartmentList, getApartmentPrices } from "./mcpClient.js";
 import { isKakaoConfigured, searchAddresses } from "./addressSearch.js";
 import { getMonthsInRange, normalizeTransaction } from "./transactions.js";
 import type { ComparisonCriteria, RuleInput, SystemConfig } from "./types.js";
-import { upsertTransactionBatch, makeGraphDedupeKey, getCachedApartments, saveCachedApartments, searchDbRegions, getLocalTransactionsCount, getLocalApartmentPrices, getUserSettings, saveUserSettings, insertActivityLog, getActivityLogs, getActivityStats } from "@myhome/shared";
+import { upsertTransactionBatch, makeGraphDedupeKey, getCachedApartments, saveCachedApartments, searchDbRegions, getLocalTransactionsCount, getLocalApartmentPrices, getUserSettings, saveUserSettings, insertActivityLog, getActivityLogs, getActivityStats, resetGeocodeFailures, updateComplexCoords, resetComplexCoords } from "@myhome/shared";
 export type GraphFilter = {
   /** 기존 단일 법정동 코드 */
   lawdCode?: string;
@@ -162,6 +162,43 @@ export function createRouter() {
 
       await saveSystemConfig(update);
       res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post("/geocoding/reset-failures", async (req, res, next) => {
+    try {
+      resetGeocodeFailures();
+      res.json({ success: true, message: "Geocoding 실패 상태가 모두 초기화되었습니다." });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.put("/complexes/coords", async (req, res, next) => {
+    try {
+      const { complexId, lat, lng } = req.body;
+      if (!complexId || lat === undefined || lng === undefined) {
+        res.status(400).json({ error: "complexId, lat, lng are required" });
+        return;
+      }
+      updateComplexCoords(complexId, Number(lat), Number(lng));
+      res.json({ success: true, message: "좌표가 수동으로 수정되었습니다." });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post("/complexes/coords/reset", async (req, res, next) => {
+    try {
+      const { complexId } = req.body;
+      if (!complexId) {
+        res.status(400).json({ error: "complexId is required" });
+        return;
+      }
+      resetComplexCoords(complexId);
+      res.json({ success: true, message: "좌표가 성공적으로 초기화되었습니다." });
     } catch (err) {
       next(err);
     }

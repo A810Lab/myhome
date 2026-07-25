@@ -189,6 +189,8 @@ export function initDb(): void {
   if (!colNames.has('lat')) db.exec('ALTER TABLE complexes ADD COLUMN lat REAL');
   if (!colNames.has('lng')) db.exec('ALTER TABLE complexes ADD COLUMN lng REAL');
   if (!colNames.has('geocoded_at')) db.exec('ALTER TABLE complexes ADD COLUMN geocoded_at TEXT');
+  if (!colNames.has('geocode_failed')) db.exec('ALTER TABLE complexes ADD COLUMN geocode_failed INTEGER DEFAULT 0');
+  if (!colNames.has('geocode_error')) db.exec('ALTER TABLE complexes ADD COLUMN geocode_error TEXT');
 
   // 좌표 보유 단지 조회 성능 인덱스
   db.exec('CREATE INDEX IF NOT EXISTS idx_complexes_geocoded ON complexes(lat, lng) WHERE lat IS NOT NULL');
@@ -1196,7 +1198,7 @@ export function getComplexesWithoutCoords(lawdCode?: string): { id: string; name
            c.dong_name AS dongName, c.jibun, c.road_name AS roadName
     FROM complexes c
     JOIN regions r ON c.lawd_code = r.lawd_code
-    WHERE c.lat IS NULL
+    WHERE c.lat IS NULL AND c.geocode_failed = 0
   `;
   const params: any[] = [];
   if (lawdCode) {
@@ -1235,8 +1237,41 @@ export function updateComplexCoords(complexId: string, lat: number, lng: number)
   const db = getDb();
   const now = new Date().toISOString();
   db.prepare(`
-    UPDATE complexes SET lat = ?, lng = ?, geocoded_at = ? WHERE id = ?
+    UPDATE complexes SET lat = ?, lng = ?, geocode_failed = 0, geocode_error = NULL, geocoded_at = ? WHERE id = ?
   `).run(lat, lng, now, complexId);
+}
+
+/**
+ * 단지 Geocoding 실패 업데이트
+ */
+export function updateComplexGeocodeFailed(complexId: string, errorMsg: string): void {
+  const db = getDb();
+  const now = new Date().toISOString();
+  db.prepare(`
+    UPDATE complexes SET geocode_failed = 1, geocode_error = ?, geocoded_at = ? WHERE id = ?
+  `).run(errorMsg, now, complexId);
+}
+
+/**
+ * 모든 단지의 Geocoding 실패 상태 초기화 (재시도 가능하게 함)
+ */
+export function resetGeocodeFailures(): void {
+  const db = getDb();
+  db.prepare(`
+    UPDATE complexes SET geocode_failed = 0, geocode_error = NULL WHERE geocode_failed = 1
+  `).run();
+}
+
+/**
+ * 특정 단지의 좌표 및 실패 상태 리셋 (다시 Geocoding 하도록)
+ */
+export function resetComplexCoords(complexId: string): void {
+  const db = getDb();
+  db.prepare(`
+    UPDATE complexes 
+    SET lat = NULL, lng = NULL, geocode_failed = 0, geocode_error = NULL, geocoded_at = NULL 
+    WHERE id = ?
+  `).run(complexId);
 }
 
 /**

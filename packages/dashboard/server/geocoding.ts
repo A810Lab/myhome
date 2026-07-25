@@ -11,6 +11,7 @@ import {
   getComplexesWithCoords,
   getComplexesWithoutCoords,
   updateComplexCoords,
+  updateComplexGeocodeFailed,
 } from "@myhome/shared";
 import { fetchApartmentPricesDirect } from "@myhome/shared";
 
@@ -54,6 +55,7 @@ export interface GeocodeDetailResult {
   lat?: number;
   lng?: number;
   reason?: string;
+  isTransient?: boolean;
 }
 
 const geocodeCache = new Map<string, GeocoordResult | null>();
@@ -75,7 +77,7 @@ export async function geocodeAddressDetailed(address: string): Promise<GeocodeDe
   if (!apiKey) {
     const reason = "카카오 API 키(KAKAO_REST_API_KEY) 설정이 누락되었습니다.";
     console.warn(`[Geocoding] ${reason}`);
-    return { success: false, reason };
+    return { success: false, reason, isTransient: true };
   }
 
   const headers = { Authorization: `KakaoAK ${apiKey}` };
@@ -89,7 +91,7 @@ export async function geocodeAddressDetailed(address: string): Promise<GeocodeDe
     });
 
     if (!addrRes.ok) {
-      return { success: false, reason: `카카오 주소 API 호출 실패 (HTTP 상태코드: ${addrRes.status})` };
+      return { success: false, reason: `카카오 주소 API 호출 실패 (HTTP 상태코드: ${addrRes.status})`, isTransient: true };
     }
 
     const addrBody = await addrRes.json();
@@ -111,7 +113,7 @@ export async function geocodeAddressDetailed(address: string): Promise<GeocodeDe
     });
 
     if (!kwRes.ok) {
-      return { success: false, reason: `카카오 키워드 API 호출 실패 (HTTP 상태코드: ${kwRes.status})` };
+      return { success: false, reason: `카카오 키워드 API 호출 실패 (HTTP 상태코드: ${kwRes.status})`, isTransient: true };
     }
 
     const kwBody = await kwRes.json();
@@ -127,12 +129,11 @@ export async function geocodeAddressDetailed(address: string): Promise<GeocodeDe
   } catch (err: any) {
     const errMsg = err?.message || String(err);
     console.error(`[Geocoding] 주소 변환 실패 (${address}):`, err);
-    geocodeCache.set(address, null);
-    return { success: false, reason: `네트워크 오류 또는 타임아웃 (${errMsg})` };
+    return { success: false, reason: `네트워크 오류 또는 타임아웃 (${errMsg})`, isTransient: true };
   }
 
   geocodeCache.set(address, null);
-  return { success: false, reason: "카카오맵 주소 및 키워드 검색 결과가 존재하지 않습니다." };
+  return { success: false, reason: "카카오맵 주소 및 키워드 검색 결과가 존재하지 않습니다.", isTransient: false };
 }
 
 /**
@@ -262,6 +263,9 @@ export async function batchGeocodeComplexes(
         reason: result.reason || "알 수 없는 오류",
       });
       console.warn(`[Geocoding] 변환 실패: ${complex.name} (${query}) - 사유: ${result.reason}`);
+      if (!result.isTransient) {
+        updateComplexGeocodeFailed(complex.id, result.reason || "알 수 없는 오류");
+      }
     }
 
     // 카카오 API Rate Limit 방지 (200ms 딜레이, 1개 초과 처리 시에만 딜레이 부여)
@@ -427,9 +431,9 @@ export async function findComplexesNearStation(
   for (const c of pendingComplexes) {
     // 사전 필터: 법정동이 다른 지역이면 Geocoding 스킵 (API 절약)
     const query = buildGeocodeQuery(c.regionName, c.dongName, c.jibun, c.name);
-    const result = await geocodeAddress(query);
+    const result = await geocodeAddressDetailed(query);
 
-    if (result) {
+    if (result.success && result.lat !== undefined && result.lng !== undefined) {
       updateComplexCoords(c.id, result.lat, result.lng);
 
       const dist = haversineDistance(stationCoords.lat, stationCoords.lng, result.lat, result.lng);
@@ -444,6 +448,10 @@ export async function findComplexesNearStation(
           dongName: c.dongName,
           jibun: c.jibun,
         });
+      }
+    } else {
+      if (!result.isTransient) {
+        updateComplexGeocodeFailed(c.id, result.reason || "알 수 없는 오류");
       }
     }
 

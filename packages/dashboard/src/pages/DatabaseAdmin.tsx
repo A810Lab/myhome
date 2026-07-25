@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useBreakpoint } from "../useBreakpoint";
-import { loadAdminDbTables, executeAdminDbQuery, searchComplexNames, clearDatabase, deleteDbRegion, deleteDbComplex, loadGeocodeStats, triggerGeocodeBatch } from "../api";
+import { loadAdminDbTables, executeAdminDbQuery, searchComplexNames, clearDatabase, deleteDbRegion, deleteDbComplex, loadGeocodeStats, triggerGeocodeBatch, updateComplexCoords, resetComplexCoords } from "../api";
 import { SectionCard } from "../components/SectionCard";
 import { Play, Database, RefreshCw, AlertCircle, CheckCircle2, ChevronRight, FileText, Settings, Building2, MapPin } from "lucide-react";
 import { copy } from "../locales/ko";
@@ -30,6 +30,40 @@ type QueryResult = {
 export function DatabaseAdminPage() {
   const { isMobile } = useBreakpoint();
   const [tables, setTables] = useState<string[]>([]);
+
+  // 탭 상태 정의 (URL 쿼리 파라미터 tab과 연동)
+  const [activeTab, setActiveTab] = useState<"sql" | "geocode" | "manage">(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam === "sql" || tabParam === "geocode" || tabParam === "manage") {
+      return tabParam;
+    }
+    return "sql";
+  });
+
+  // 탭 변경 시 URL 파라미터 동기화
+  const handleTabChange = (tab: "sql" | "geocode" | "manage") => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(window.location.search);
+    params.set("tab", tab);
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(window.history.state, "", newUrl);
+  };
+
+  // 브라우저 뒤로가기 / 앞으로가기 시 탭 싱크
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam === "sql" || tabParam === "geocode" || tabParam === "manage") {
+        setActiveTab(tabParam);
+      } else {
+        setActiveTab("sql");
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   // Geocoding 통계 상태
   const [geocodeStats, setGeocodeStats] = useState<{
@@ -247,6 +281,94 @@ export function DatabaseAdminPage() {
     }
   }
 
+  // 좌표 수동 관리 상태
+  const [coordsQuery, setCoordsQuery] = useState("");
+  const [showCoordsDropdown, setShowCoordsDropdown] = useState(false);
+  const [activeCoordsIndex, setActiveCoordsIndex] = useState(-1);
+  const [coordsApartments, setCoordsApartments] = useState<any[]>([]);
+  const [searchingCoords, setSearchingCoords] = useState(false);
+
+  const [selectedComplex, setSelectedComplex] = useState<any | null>(null);
+  const [editLat, setEditLat] = useState("");
+  const [editLng, setEditLng] = useState("");
+  const [coordsUpdating, setCoordsUpdating] = useState(false);
+
+  // 좌표 수동 관리 단지 검색 디바운스
+  useEffect(() => {
+    const q = coordsQuery.trim();
+    if (q.length === 0) {
+      setCoordsApartments([]);
+      return;
+    }
+    if (q.length === 1) {
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setSearchingCoords(true);
+      try {
+        const found = await searchComplexNames(q);
+        setCoordsApartments(found);
+      } catch (err) {
+        console.error("Failed to search complexes for coords:", err);
+        setCoordsApartments([]);
+      } finally {
+        setSearchingCoords(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [coordsQuery]);
+
+  const handleSelectCoordsComplex = (complex: any) => {
+    setSelectedComplex(complex);
+    setCoordsQuery(complex.name);
+    setEditLat(complex.lat !== null && complex.lat !== undefined ? String(complex.lat) : "");
+    setEditLng(complex.lng !== null && complex.lng !== undefined ? String(complex.lng) : "");
+    setShowCoordsDropdown(false);
+  };
+
+  const handleUpdateCoords = async () => {
+    if (!selectedComplex) return;
+    const latNum = parseFloat(editLat);
+    const lngNum = parseFloat(editLng);
+    if (isNaN(latNum) || isNaN(lngNum)) {
+      alert("위도와 경도는 올바른 숫자여야 합니다.");
+      return;
+    }
+
+    setCoordsUpdating(true);
+    try {
+      await updateComplexCoords(selectedComplex.id, latNum, lngNum);
+      alert(`'${selectedComplex.name}' 단지의 좌표가 성공적으로 수정되었습니다.`);
+      setSelectedComplex({ ...selectedComplex, lat: latNum, lng: lngNum });
+      void fetchGeocodeStats();
+    } catch (err: any) {
+      alert(`좌표 수정 실패: ${err.message || "오류가 발생했습니다."}`);
+    } finally {
+      setCoordsUpdating(false);
+    }
+  };
+
+  const handleResetCoords = async () => {
+    if (!selectedComplex) return;
+    if (!confirm(`'${selectedComplex.name}' 단지의 좌표를 초기화하고 다시 Geocoding 하도록 설정하시겠습니까?`)) return;
+
+    setCoordsUpdating(true);
+    try {
+      await resetComplexCoords(selectedComplex.id);
+      alert(`'${selectedComplex.name}' 단지의 좌표가 초기화되었습니다. 다음 수집 또는 일괄 Geocoding 시 좌표를 새로 갱신합니다.`);
+      setSelectedComplex({ ...selectedComplex, lat: null, lng: null });
+      setEditLat("");
+      setEditLng("");
+      void fetchGeocodeStats();
+    } catch (err: any) {
+      alert(`좌표 초기화 실패: ${err.message || "오류가 발생했습니다."}`);
+    } finally {
+      setCoordsUpdating(false);
+    }
+  };
+
   const [sql, setSql] = useState<string>("SELECT * FROM transactions LIMIT 20;");
   const [executing, setExecuting] = useState(false);
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
@@ -310,126 +432,316 @@ export function DatabaseAdminPage() {
         </header>
       )}
 
-      {/* 2열 반응형 레이아웃 */}
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
-        
-        {/* 좌측: 스키마 브라우저 */}
-        <div className="space-y-6">
-          <SectionCard
-            title={t.tablesList}
-            right={
-              <button
-                type="button"
-                onClick={() => void loadSchemaData()}
-                disabled={loadingSchema}
-                className="p-1.5 text-neutral hover:text-strong hover:bg-alternative rounded-lg transition-colors"
-                title="새로고침"
-              >
-                <RefreshCw className={`h-4 w-4 ${loadingSchema ? "animate-spin" : ""}`} />
-              </button>
-            }
+      {/* 2-mode 반응형 탭 스트립 */}
+      {isMobile ? (
+        <div className="overflow-x-auto scrollbar-none snap-x snap-mandatory flex flex-nowrap gap-2 pb-1 border-b border-normal/50">
+          <button
+            type="button"
+            onClick={() => handleTabChange("sql")}
+            className={classNames(
+              "snap-start shrink-0 px-4 py-2 text-xs font-bold transition-all whitespace-nowrap",
+              activeTab === "sql"
+                ? "bg-primary text-white rounded-full shadow-sm shadow-primary/20"
+                : "text-neutral hover:text-strong hover:bg-alternative rounded-full"
+            )}
           >
-            {tables.length === 0 ? (
-              <p className="text-sm text-neutral text-center py-4">테이블이 존재하지 않습니다.</p>
-            ) : (
-              <div className="space-y-4">
-                {/* 테이블 선택 셀렉트 (모바일 대응) */}
-                <div className="lg:hidden">
-                  <select
-                    value={selectedTable}
-                    onChange={(e) => setSelectedTable(e.target.value)}
-                    className="w-full h-10 rounded-lg border border-normal bg-normal px-3 text-sm font-semibold text-strong outline-none"
-                  >
-                    {tables.map((tName) => (
-                      <option key={tName} value={tName}>
-                        {tName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            {t.dbTabSql}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("geocode")}
+            className={classNames(
+              "snap-start shrink-0 px-4 py-2 text-xs font-bold transition-all whitespace-nowrap",
+              activeTab === "geocode"
+                ? "bg-primary text-white rounded-full shadow-sm shadow-primary/20"
+                : "text-neutral hover:text-strong hover:bg-alternative rounded-full"
+            )}
+          >
+            {t.dbTabGeocoding}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("manage")}
+            className={classNames(
+              "snap-start shrink-0 px-4 py-2 text-xs font-bold transition-all whitespace-nowrap",
+              activeTab === "manage"
+                ? "bg-primary text-white rounded-full shadow-sm shadow-primary/20"
+                : "text-neutral hover:text-strong hover:bg-alternative rounded-full"
+            )}
+          >
+            {t.dbTabManagement}
+          </button>
+        </div>
+      ) : (
+        <div className="border-b border-normal flex gap-6 text-sm">
+          <button
+            type="button"
+            onClick={() => handleTabChange("sql")}
+            className={classNames(
+              "pb-3 px-1 border-b-2 transition-all font-bold",
+              activeTab === "sql"
+                ? "border-primary text-primary"
+                : "border-transparent text-neutral hover:text-strong"
+            )}
+          >
+            {t.dbTabSql}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("geocode")}
+            className={classNames(
+              "pb-3 px-1 border-b-2 transition-all font-bold",
+              activeTab === "geocode"
+                ? "border-primary text-primary"
+                : "border-transparent text-neutral hover:text-strong"
+            )}
+          >
+            {t.dbTabGeocoding}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("manage")}
+            className={classNames(
+              "pb-3 px-1 border-b-2 transition-all font-bold",
+              activeTab === "manage"
+                ? "border-primary text-primary"
+                : "border-transparent text-neutral hover:text-strong"
+            )}
+          >
+            {t.dbTabManagement}
+          </button>
+        </div>
+      )}
 
-                {/* 테이블 리스트 (데스크톱 대응) */}
-                <div className="hidden lg:block space-y-1">
-                  {tables.map((tName) => (
-                    <button
-                      key={tName}
-                      type="button"
-                      onClick={() => setSelectedTable(tName)}
-                      className={`w-full text-left flex items-center gap-2 px-3 py-2 text-sm font-bold rounded-lg transition-colors ${
-                        selectedTable === tName
-                          ? "bg-primary/10 text-primary"
-                          : "text-neutral hover:bg-alternative hover:text-strong"
-                      }`}
+      {/* 탭 1: SQL 탐색기 */}
+      {activeTab === "sql" && (
+        <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
+          {/* 좌측: 스키마 브라우저 & 템플릿 */}
+          <div className="space-y-6">
+            <SectionCard
+              title={t.tablesList}
+              right={
+                <button
+                  type="button"
+                  onClick={() => void loadSchemaData()}
+                  disabled={loadingSchema}
+                  className="p-1.5 text-neutral hover:text-strong hover:bg-alternative rounded-lg transition-colors"
+                  title="새로고침"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loadingSchema ? "animate-spin" : ""}`} />
+                </button>
+              }
+            >
+              {tables.length === 0 ? (
+                <p className="text-sm text-neutral text-center py-4">테이블이 존재하지 않습니다.</p>
+              ) : (
+                <div className="space-y-4">
+                  {/* 테이블 선택 셀렉트 (모바일 대응) */}
+                  <div className="lg:hidden">
+                    <select
+                      value={selectedTable}
+                      onChange={(e) => setSelectedTable(e.target.value)}
+                      className="w-full h-10 rounded-lg border border-normal bg-normal px-3 text-sm font-semibold text-strong outline-none"
                     >
-                      <Database className="h-4 w-4 shrink-0" />
-                      <span>{tName}</span>
-                    </button>
-                  ))}
+                      {tables.map((tName) => (
+                        <option key={tName} value={tName}>
+                          {tName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 테이블 리스트 (데스크톱 대응) */}
+                  <div className="hidden lg:block space-y-1">
+                    {tables.map((tName) => (
+                      <button
+                        key={tName}
+                        type="button"
+                        onClick={() => setSelectedTable(tName)}
+                        className={`w-full text-left flex items-center gap-2 px-3 py-2 text-sm font-bold rounded-lg transition-colors ${
+                          selectedTable === tName
+                            ? "bg-primary/10 text-primary"
+                            : "text-neutral hover:bg-alternative hover:text-strong"
+                        }`}
+                      >
+                        <Database className="h-4 w-4 shrink-0" />
+                        <span>{tName}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 선택한 테이블 스키마 상세 정보 */}
+                  {selectedTable && schemas[selectedTable] && (
+                    <div className="border-t border-normal/50 pt-3 space-y-2">
+                      <p className="text-[11px] font-bold text-assistive tracking-wide uppercase">{t.schemaInfo}: {selectedTable}</p>
+                      <div className="overflow-x-auto max-h-60 border border-normal rounded-lg">
+                        <table className="w-full text-[11px] leading-normal">
+                          <thead>
+                            <tr className="bg-alternative/60 border-b border-normal text-left text-neutral">
+                              <th className="px-2.5 py-1.5 font-bold">컬럼명</th>
+                              <th className="px-2.5 py-1.5 font-bold">타입</th>
+                              <th className="px-2.5 py-1.5 font-bold text-center">PK</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {schemas[selectedTable].map((col) => (
+                              <tr key={col.cid} className="border-b border-normal/30 last:border-b-0 hover:bg-alternative/30">
+                                <td className="px-2.5 py-1.5 font-semibold text-strong">{col.name}</td>
+                                <td className="px-2.5 py-1.5 text-neutral">{col.type}</td>
+                                <td className="px-2.5 py-1.5 text-center font-bold text-primary">{col.pk ? "✓" : ""}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </SectionCard>
+
+            {/* SQL 템플릿 카드 */}
+            <SectionCard title={t.sqlTemplate}>
+              <div className="space-y-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => injectTemplate("SELECT * FROM transactions LIMIT 20;")}
+                  className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-alternative hover:bg-alternative/80 text-strong font-semibold transition-colors"
+                >
+                  <FileText className="h-3.5 w-3.5 text-neutral shrink-0" />
+                  <span>최근 실거래 조회</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => injectTemplate("SELECT * FROM regions LIMIT 20;")}
+                  className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-alternative hover:bg-alternative/80 text-strong font-semibold transition-colors"
+                >
+                  <FileText className="h-3.5 w-3.5 text-neutral shrink-0" />
+                  <span>등록된 지역 조회</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => injectTemplate("SELECT * FROM complexes LIMIT 20;")}
+                  className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-alternative hover:bg-alternative/80 text-strong font-semibold transition-colors"
+                >
+                  <FileText className="h-3.5 w-3.5 text-neutral shrink-0" />
+                  <span>등록된 단지 조회</span>
+                </button>
+              </div>
+            </SectionCard>
+          </div>
+
+          {/* 우측: SQL 콘솔 & 실행 결과 */}
+          <div className="space-y-6">
+            <SectionCard title="SQL 콘솔">
+              <div className="space-y-4">
+                <div className="relative rounded-xl border border-normal bg-alternative/40 focus-within:border-primary overflow-hidden">
+                  <textarea
+                    value={sql}
+                    onChange={(e) => setSql(e.target.value)}
+                    placeholder={t.sqlPlaceholder}
+                    rows={6}
+                    className="w-full p-4 text-sm font-mono text-strong bg-transparent outline-none resize-y"
+                  />
                 </div>
 
-                {/* 선택한 테이블 스키마 상세 정보 */}
-                {selectedTable && schemas[selectedTable] && (
-                  <div className="border-t border-normal/50 pt-3 space-y-2">
-                    <p className="text-[11px] font-bold text-assistive tracking-wide uppercase">{t.schemaInfo}: {selectedTable}</p>
-                    <div className="overflow-x-auto max-h-60 border border-normal rounded-lg">
-                      <table className="w-full text-[11px] leading-normal">
-                        <thead>
-                          <tr className="bg-alternative/60 border-b border-normal text-left text-neutral">
-                            <th className="px-2.5 py-1.5 font-bold">컬럼명</th>
-                            <th className="px-2.5 py-1.5 font-bold">타입</th>
-                            <th className="px-2.5 py-1.5 font-bold text-center">PK</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {schemas[selectedTable].map((col) => (
-                            <tr key={col.cid} className="border-b border-normal/30 last:border-b-0 hover:bg-alternative/30">
-                              <td className="px-2.5 py-1.5 font-semibold text-strong">{col.name}</td>
-                              <td className="px-2.5 py-1.5 text-neutral">{col.type}</td>
-                              <td className="px-2.5 py-1.5 text-center font-bold text-primary">{col.pk ? "✓" : ""}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void handleExecute()}
+                    disabled={executing || !sql.trim()}
+                    className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-blue-500/20 transition-all hover:opacity-90 disabled:opacity-50"
+                  >
+                    {executing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                    {t.execute}
+                  </button>
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* 에러 또는 결과 표출 */}
+            {(queryError || queryResult) && (
+              <SectionCard title={t.queryResult}>
+                {queryError && (
+                  <div className="flex gap-2 rounded-xl border border-red-200/50 bg-red-500/10 p-4 text-sm text-red-600">
+                    <AlertCircle className="h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="font-bold">SQL 에러</p>
+                      <p className="mt-1 font-mono text-xs whitespace-pre-wrap">{queryError}</p>
                     </div>
                   </div>
                 )}
-              </div>
+
+                {queryResult && (
+                  <div className="space-y-3">
+                    {/* 쓰기(DML/DDL) 처리 성공 요약 */}
+                    {queryResult.type === "write" && (
+                      <div className="flex gap-2 rounded-xl border border-emerald-200/50 bg-emerald-500/10 p-4 text-sm text-emerald-600">
+                        <CheckCircle2 className="h-5 w-5 shrink-0" />
+                        <div>
+                          <p className="font-bold">{t.querySuccess}</p>
+                          <ul className="mt-1.5 space-y-1 text-xs">
+                            <li>• {t.affectedRows}: <b>{queryResult.changes ?? 0}</b></li>
+                            {queryResult.lastInsertRowid !== undefined && (
+                              <li>• {t.lastInsertId}: <b>{queryResult.lastInsertRowid}</b></li>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* SELECT 조회 성공 테이블 데이터 표출 */}
+                    {queryResult.type === "select" && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-neutral">
+                          조회 완료: <b>{queryResult.rows?.length ?? 0}</b>{t.rowsCount}
+                        </p>
+
+                        {queryResult.rows && queryResult.rows.length > 0 ? (
+                          <div className="overflow-x-auto border border-normal rounded-xl max-h-[500px]">
+                            <table className="min-w-full text-xs">
+                              <thead>
+                                <tr className="bg-alternative border-b border-normal text-left text-neutral">
+                                  {resultHeaders.map((header) => (
+                                    <th key={header} className="px-4 py-3 font-bold whitespace-nowrap">
+                                      {header}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {queryResult.rows.map((row, index) => (
+                                  <tr key={index} className="border-b border-normal/30 last:border-b-0 hover:bg-alternative/40">
+                                    {resultHeaders.map((header) => (
+                                      <td key={header} className="px-4 py-2.5 font-medium text-strong whitespace-nowrap">
+                                        {row[header] !== null && row[header] !== undefined
+                                          ? String(row[header])
+                                          : <span className="text-assistive font-normal">NULL</span>}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <p className="text-center py-10 text-sm text-neutral bg-alternative/30 rounded-xl border border-dashed border-normal">
+                            조회 결과(Rows)가 존재하지 않습니다.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </SectionCard>
             )}
-          </SectionCard>
-
-          {/* SQL 템플릿 카드 */}
-          <SectionCard title={t.sqlTemplate}>
-            <div className="space-y-2 text-xs">
-              <button
-                type="button"
-                onClick={() => injectTemplate("SELECT * FROM transactions LIMIT 20;")}
-                className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-alternative hover:bg-alternative/80 text-strong font-semibold transition-colors"
-              >
-                <FileText className="h-3.5 w-3.5 text-neutral shrink-0" />
-                <span>최근 실거래 조회</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => injectTemplate("SELECT * FROM regions LIMIT 20;")}
-                className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-alternative hover:bg-alternative/80 text-strong font-semibold transition-colors"
-              >
-                <FileText className="h-3.5 w-3.5 text-neutral shrink-0" />
-                <span>등록된 지역 조회</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => injectTemplate("SELECT * FROM complexes LIMIT 20;")}
-                className="w-full text-left flex items-center gap-2 p-2 rounded-lg bg-alternative hover:bg-alternative/80 text-strong font-semibold transition-colors"
-              >
-                <FileText className="h-3.5 w-3.5 text-neutral shrink-0" />
-                <span>등록된 단지 조회</span>
-              </button>
-            </div>
-          </SectionCard>
+          </div>
         </div>
+      )}
 
-        {/* 우측: 데이터 관리 도구 및 SQL 에디터 */}
-        <div className="space-y-6">
+      {/* 탭 2: 위치/좌표 관리 */}
+      {activeTab === "geocode" && (
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Geocoding 좌표 캐싱 관리 */}
           <SectionCard
             title="Geocoding 좌표 캐싱 관리"
@@ -542,6 +854,138 @@ export function DatabaseAdminPage() {
             </div>
           </SectionCard>
 
+          {/* 단지 좌표 수동 관리 */}
+          <SectionCard title="단지 좌표 수동 관리">
+            <div className="space-y-4">
+              <p className="text-xs text-neutral">
+                Geocoding이 잘못되었거나 지도가 엉뚱한 위치를 가리키는 아파트 단지의 좌표를 수동으로 수정하거나 리셋할 수 있습니다.
+              </p>
+
+              <div className="space-y-3 p-3 rounded-lg border border-normal bg-alternative/30">
+                <span className="text-xs font-bold text-strong flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-neutral shrink-0" />
+                  단지 검색 및 좌표 설정
+                </span>
+                <div className="relative flex gap-2 items-center mt-1">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      className="w-full h-[38px] rounded-lg border border-normal bg-normal pl-3 pr-8 text-xs font-semibold text-strong outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                      value={coordsQuery}
+                      onChange={(e) => {
+                        setCoordsQuery(e.target.value);
+                        setShowCoordsDropdown(true);
+                        if (selectedComplex && e.target.value !== selectedComplex.name) {
+                          setSelectedComplex(null);
+                        }
+                      }}
+                      onFocus={() => setShowCoordsDropdown(true)}
+                      onBlur={() => {
+                        setTimeout(() => {
+                          setShowCoordsDropdown(false);
+                          setActiveCoordsIndex(-1);
+                        }, 200);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (showCoordsDropdown && activeCoordsIndex >= 0 && activeCoordsIndex < coordsApartments.length) {
+                            handleSelectCoordsComplex(coordsApartments[activeCoordsIndex]);
+                          }
+                        } else if (showCoordsDropdown && coordsApartments.length > 0) {
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            setActiveCoordsIndex((prev) => (prev < coordsApartments.length - 1 ? prev + 1 : prev));
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            setActiveCoordsIndex((prev) => (prev > 0 ? prev - 1 : -1));
+                          } else if (e.key === "Escape") {
+                            setShowCoordsDropdown(false);
+                            setActiveCoordsIndex(-1);
+                          }
+                        }
+                      }}
+                      placeholder="좌표를 수정할 단지명 검색..."
+                      autoComplete="off"
+                    />
+                    {searchingCoords && <RefreshCw className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-neutral" />}
+
+                    {showCoordsDropdown && coordsApartments.length > 0 && (
+                      <ul className="absolute z-30 left-0 right-0 top-full mt-1 max-h-40 overflow-auto rounded-lg border border-normal bg-elevated py-1 shadow-lg">
+                        {coordsApartments.map((complex, index) => (
+                          <li key={`${complex.id}-${index}`}>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handleSelectCoordsComplex(complex)}
+                              className={classNames(
+                                "w-full text-left px-3 py-1.5 text-xs transition-colors",
+                                index === activeCoordsIndex ? "bg-primary/10 text-primary font-semibold" : "hover:bg-alternative text-strong"
+                              )}
+                            >
+                              {complex.name} <span className="text-[10px] text-neutral">({complex.regionName || complex.lawdCode})</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
+                {selectedComplex && (
+                  <div className="mt-3 space-y-3 pt-3 border-t border-normal/50">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-neutral mb-1">위도 (Latitude)</label>
+                        <input
+                          type="text"
+                          className="w-full h-[36px] rounded-lg border border-normal bg-normal px-3 text-xs font-semibold text-strong outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                          value={editLat}
+                          onChange={(e) => setEditLat(e.target.value)}
+                          placeholder="예: 37.123456"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-neutral mb-1">경도 (Longitude)</label>
+                        <input
+                          type="text"
+                          className="w-full h-[36px] rounded-lg border border-normal bg-normal px-3 text-xs font-semibold text-strong outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                          value={editLng}
+                          onChange={(e) => setEditLng(e.target.value)}
+                          placeholder="예: 127.123456"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 justify-end pt-1">
+                      <button
+                        type="button"
+                        disabled={coordsUpdating}
+                        onClick={handleResetCoords}
+                        className="rounded-lg bg-orange-500/10 hover:bg-orange-500/20 px-3.5 py-2 text-xs font-bold text-orange-600 disabled:opacity-50 transition-all"
+                      >
+                        좌표 초기화(재수집)
+                      </button>
+                      <button
+                        type="button"
+                        disabled={coordsUpdating || !editLat.trim() || !editLng.trim()}
+                        onClick={handleUpdateCoords}
+                        className="rounded-lg bg-primary px-3.5 py-2 text-xs font-bold text-white hover:bg-primary/90 disabled:opacity-50 transition-all"
+                      >
+                        좌표 저장
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </SectionCard>
+        </div>
+      )}
+
+      {/* 탭 3: 데이터 관리 */}
+      {activeTab === "manage" && (
+        <div className="max-w-4xl mx-auto">
           <SectionCard title="데이터 관리 도구">
             <div className="space-y-4">
               <p className="text-xs text-neutral">
@@ -685,112 +1129,8 @@ export function DatabaseAdminPage() {
               </div>
             </div>
           </SectionCard>
-
-          <SectionCard title="SQL 콘솔">
-            <div className="space-y-4">
-              <div className="relative rounded-xl border border-normal bg-alternative/40 focus-within:border-primary overflow-hidden">
-                <textarea
-                  value={sql}
-                  onChange={(e) => setSql(e.target.value)}
-                  placeholder={t.sqlPlaceholder}
-                  rows={6}
-                  className="w-full p-4 text-sm font-mono text-strong bg-transparent outline-none resize-y"
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => void handleExecute()}
-                  disabled={executing || !sql.trim()}
-                  className="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm shadow-blue-500/20 transition-all hover:opacity-90 disabled:opacity-50"
-                >
-                  {executing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                  {t.execute}
-                </button>
-              </div>
-            </div>
-          </SectionCard>
-
-          {/* 에러 또는 결과 표출 */}
-          {(queryError || queryResult) && (
-            <SectionCard title={t.queryResult}>
-              {queryError && (
-                <div className="flex gap-2 rounded-xl border border-red-200/50 bg-red-500/10 p-4 text-sm text-red-600">
-                  <AlertCircle className="h-5 w-5 shrink-0" />
-                  <div>
-                    <p className="font-bold">SQL 에러</p>
-                    <p className="mt-1 font-mono text-xs whitespace-pre-wrap">{queryError}</p>
-                  </div>
-                </div>
-              )}
-
-              {queryResult && (
-                <div className="space-y-3">
-                  {/* 쓰기(DML/DDL) 처리 성공 요약 */}
-                  {queryResult.type === "write" && (
-                    <div className="flex gap-2 rounded-xl border border-emerald-200/50 bg-emerald-500/10 p-4 text-sm text-emerald-600">
-                      <CheckCircle2 className="h-5 w-5 shrink-0" />
-                      <div>
-                        <p className="font-bold">{t.querySuccess}</p>
-                        <ul className="mt-1.5 space-y-1 text-xs">
-                          <li>• {t.affectedRows}: <b>{queryResult.changes ?? 0}</b></li>
-                          {queryResult.lastInsertRowid !== undefined && (
-                            <li>• {t.lastInsertId}: <b>{queryResult.lastInsertRowid}</b></li>
-                          )}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* SELECT 조회 성공 테이블 데이터 표출 */}
-                  {queryResult.type === "select" && (
-                    <div className="space-y-2">
-                      <p className="text-xs text-neutral">
-                        조회 완료: <b>{queryResult.rows?.length ?? 0}</b>{t.rowsCount}
-                      </p>
-
-                      {queryResult.rows && queryResult.rows.length > 0 ? (
-                        <div className="overflow-x-auto border border-normal rounded-xl max-h-[500px]">
-                          <table className="min-w-full text-xs">
-                            <thead>
-                              <tr className="bg-alternative border-b border-normal text-left text-neutral">
-                                {resultHeaders.map((header) => (
-                                  <th key={header} className="px-4 py-3 font-bold whitespace-nowrap">
-                                    {header}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {queryResult.rows.map((row, index) => (
-                                <tr key={index} className="border-b border-normal/30 last:border-b-0 hover:bg-alternative/40">
-                                  {resultHeaders.map((header) => (
-                                    <td key={header} className="px-4 py-2.5 font-medium text-strong whitespace-nowrap">
-                                      {row[header] !== null && row[header] !== undefined
-                                        ? String(row[header])
-                                        : <span className="text-assistive font-normal">NULL</span>}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p className="text-center py-10 text-sm text-neutral bg-alternative/30 rounded-xl border border-dashed border-normal">
-                          조회 결과(Rows)가 존재하지 않습니다.
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </SectionCard>
-          )}
-
         </div>
-      </div>
+      )}
     </div>
   );
 }

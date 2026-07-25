@@ -246,6 +246,9 @@ export const copy = {
     affectedRows: "영향받은 행 수",
     lastInsertId: "마지막 삽입 ID",
     sqlTemplate: "SQL 템플릿",
+    dbTabSql: "SQL 탐색기",
+    dbTabGeocoding: "위치/좌표 관리",
+    dbTabManagement: "데이터 관리",
 
     // Settings
     settingsTitle: "환경 설정",
@@ -574,6 +577,9 @@ export const copy = {
     affectedRows: "Affected Rows",
     lastInsertId: "Last Insert ID",
     sqlTemplate: "SQL Templates",
+    dbTabSql: "SQL Explorer",
+    dbTabGeocoding: "Location & Coordinates",
+    dbTabManagement: "Data Management",
 
     // Settings
     settingsTitle: "Settings",
