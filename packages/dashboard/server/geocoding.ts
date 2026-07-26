@@ -702,4 +702,228 @@ export async function findSubwayStationsNearCoords(
   return [];
 }
 
+// ──────────────────────────────────────────────────
+// 단지 주변 입지 평가 평점 (학교 > 병원 > 대형마트 > 약국 > 편의점)
+// ──────────────────────────────────────────────────
+
+function simpleStringHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+}
+
+function calculateCategoryScore(code: string, minDistance: number | null, count: number): number {
+  if (minDistance === null || count === 0) return 0;
+
+  // 1. 거리 점수 계산 (S_dist)
+  let distanceScore = 0;
+  const d = minDistance;
+
+  if (code === "SW8") {
+    // 지하철역 (반경 1500m) - 최고 배점
+    if (d <= 250) distanceScore = 100;
+    else if (d <= 500) distanceScore = 85;
+    else if (d <= 1000) distanceScore = 65;
+    else if (d <= 1500) distanceScore = 40;
+    else distanceScore = 0;
+  } else if (code === "SC4") {
+    // 학교 (반경 500m)
+    if (d <= 150) distanceScore = 100;
+    else if (d <= 300) distanceScore = 85;
+    else if (d <= 500) distanceScore = 60;
+    else distanceScore = 0;
+  } else if (code === "HP8") {
+    // 병원 (반경 1000m)
+    if (d <= 300) distanceScore = 100;
+    else if (d <= 500) distanceScore = 80;
+    else if (d <= 1000) distanceScore = 50;
+    else distanceScore = 0;
+  } else if (code === "MT1") {
+    // 대형마트 (반경 1500m)
+    if (d <= 500) distanceScore = 100;
+    else if (d <= 1000) distanceScore = 80;
+    else if (d <= 1500) distanceScore = 50;
+    else distanceScore = 0;
+  } else if (code === "PM9") {
+    // 약국 (반경 500m)
+    if (d <= 100) distanceScore = 100;
+    else if (d <= 300) distanceScore = 80;
+    else if (d <= 500) distanceScore = 50;
+    else distanceScore = 0;
+  } else if (code === "CS2") {
+    // 편의점 (반경 300m)
+    if (d <= 50) distanceScore = 100;
+    else if (d <= 150) distanceScore = 80;
+    else if (d <= 300) distanceScore = 50;
+    else distanceScore = 0;
+  } else {
+    // 기본 디폴트
+    if (d <= 300) distanceScore = 100;
+    else if (d <= 500) distanceScore = 80;
+    else if (d <= 1000) distanceScore = 50;
+    else distanceScore = 0;
+  }
+
+  // 2. 최종 카테고리 평점 (거리 100%)
+  const finalScore = distanceScore;
+
+  return Math.round(finalScore);
+}
+
+function generateMockInfraRating(complexName: string) {
+  const hash = simpleStringHash(complexName);
+  const categoryConfigs = [
+    { code: "SW8", name: "지하철역", weight: 1.5, radius: 1500, baseDist: 150, countMax: 4 },
+    { code: "SC4", name: "학교", weight: 1.0, radius: 500, baseDist: 100, countMax: 3 },
+    { code: "HP8", name: "병원", weight: 0.8, radius: 1000, baseDist: 200, countMax: 5 },
+    { code: "MT1", name: "대형마트", weight: 0.7, radius: 1500, baseDist: 400, countMax: 2 }
+  ];
+
+  const categories: Record<string, any> = {};
+  let weightedScoreSum = 0;
+  let weightSum = 0;
+
+  for (const config of categoryConfigs) {
+    const categoryHash = hash + config.code.charCodeAt(0) + config.code.charCodeAt(1);
+    
+    // 해시 기반으로 시설이 존재 여부 및 거리 시뮬레이션
+    const simulatedDist = config.baseDist + (categoryHash % Math.round(config.radius * 1.3));
+    const hasFacilities = simulatedDist <= config.radius;
+    
+    let count = 0;
+    let minDistance: number | null = null;
+    let score = 0;
+
+    if (hasFacilities) {
+      count = (categoryHash % config.countMax) + 1;
+      minDistance = simulatedDist;
+      score = calculateCategoryScore(config.code, minDistance, count);
+    } else {
+      score = 0;
+    }
+
+    categories[config.code] = {
+      name: config.name,
+      score,
+      count,
+      minDistance
+    };
+
+    weightedScoreSum += score * config.weight;
+    weightSum += config.weight;
+  }
+
+  const totalScore = Math.round((weightedScoreSum / weightSum) * 10) / 10;
+  let grade = "D";
+  if (totalScore >= 90) grade = "S";
+  else if (totalScore >= 80) grade = "A";
+  else if (totalScore >= 70) grade = "B";
+  else if (totalScore >= 60) grade = "C";
+
+  return {
+    totalScore,
+    grade,
+    categories,
+    isMock: true
+  };
+}
+
+const nearbyInfraCache = new Map<string, any>();
+
+/**
+ * 특정 좌표 반경 내 핵심 입지(지하철역, 학교, 병원, 대형마트, 약국, 편의점) 검색 후 가중 평점 계산 (특화 반경 및 노멀라이징 적용)
+ */
+export async function getComplexInfraRating(
+  lat: number | null,
+  lng: number | null,
+  complexName: string
+): Promise<any> {
+  if (lat === null || lng === null) {
+    return generateMockInfraRating(complexName);
+  }
+
+  const cacheKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  if (nearbyInfraCache.has(cacheKey)) {
+    return nearbyInfraCache.get(cacheKey);
+  }
+
+  const apiKey = process.env.KAKAO_REST_API_KEY;
+  if (!apiKey) {
+    const mock = generateMockInfraRating(complexName);
+    nearbyInfraCache.set(cacheKey, mock);
+    return mock;
+  }
+
+  const categoryConfigs = [
+    { code: "SW8", name: "지하철역", weight: 1.5, radius: 1500 },
+    { code: "SC4", name: "학교", weight: 1.0, radius: 500 },
+    { code: "HP8", name: "병원", weight: 0.8, radius: 1000 },
+    { code: "MT1", name: "대형마트", weight: 0.7, radius: 1500 }
+  ];
+
+  const categories: Record<string, any> = {};
+  let weightedScoreSum = 0;
+  let weightSum = 0;
+
+  try {
+    for (const config of categoryConfigs) {
+      const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=${config.code}&x=${lng}&y=${lat}&radius=${config.radius}&sort=distance`;
+      const res = await fetch(url, {
+        headers: { Authorization: `KakaoAK ${apiKey}` },
+        signal: AbortSignal.timeout(5000),
+      });
+
+      let count = 0;
+      let minDistance: number | null = null;
+      let score = 0;
+
+      if (res.ok) {
+        const body = await res.json();
+        if (body.documents && body.documents.length > 0) {
+          count = body.meta?.total_count || body.documents.length;
+          minDistance = parseInt(body.documents[0].distance) || 0;
+          score = calculateCategoryScore(config.code, minDistance, count);
+        }
+      }
+
+      categories[config.code] = {
+        name: config.name,
+        score,
+        count,
+        minDistance
+      };
+
+      weightedScoreSum += score * config.weight;
+      weightSum += config.weight;
+      
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    const totalScore = Math.round((weightedScoreSum / weightSum) * 10) / 10;
+    let grade = "D";
+    if (totalScore >= 90) grade = "S";
+    else if (totalScore >= 80) grade = "A";
+    else if (totalScore >= 70) grade = "B";
+    else if (totalScore >= 60) grade = "C";
+
+    const result = {
+      totalScore,
+      grade,
+      categories,
+      isMock: false
+    };
+
+    nearbyInfraCache.set(cacheKey, result);
+    return result;
+
+  } catch (err) {
+    console.error(`[Geocoding] 입지 분석 실패 (${lat}, ${lng}), Mock 폴백 사용:`, err);
+    return generateMockInfraRating(complexName);
+  }
+}
+
+
 

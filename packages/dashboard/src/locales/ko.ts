@@ -333,7 +333,34 @@ export const copy = {
     recentSearch: "최근 검색",
     recentSearchClear: "전체 삭제",
     recentRegions: "최근 검색 지역",
-    recentStations: "최근 검색 지하철역"
+    recentStations: "최근 검색 지하철역",
+    activityType_page_view: "페이지 뷰",
+    activityType_search_transactions: "실거래 검색",
+    activityType_region_add: "지역 추가",
+    activityType_region_delete: "지역 삭제",
+    activityType_rule_create: "규칙 생성",
+    activityType_rule_update: "규칙 수정",
+    activityType_rule_delete: "규칙 삭제",
+    activityType_rule_test: "규칙 테스트",
+    activityType_preset_create: "프리셋 추가",
+    activityType_preset_delete: "프리셋 삭제",
+    
+    // 입지 분석 평점
+    infraRatingTitle: "⭐ 단지 주변 입지 평가 리포트",
+    infraRatingSubtitle: "반경 1km 이내의 핵심 생활 인프라 시설의 최단 거리를 가중치 분석하여 산출한 종합 평가 점수입니다.",
+    infraTotalScore: "종합 평가 점수",
+    infraGrade: "입지 등급",
+    infraCategory: "인프라 부문",
+    infraScore: "부문 점수",
+    infraCount: "시설 개수",
+    infraMinDistance: "최단 거리",
+    infraWalkMin: "도보 약 {min}분",
+    infraMockNotice: "⚠️ 카카오 API 키가 설정되지 않아 샘플 입지 데이터로 표시 중입니다.",
+    infraCategorySchool: "학교",
+    infraCategoryHospital: "병원",
+    infraCategoryMart: "대형마트",
+    infraCategoryPharmacy: "약국",
+    infraCategoryConvStore: "편의점"
   },
   en: {
     // Navigation / Breadcrumb Parents
@@ -664,7 +691,34 @@ export const copy = {
     recentSearch: "Recent Search",
     recentSearchClear: "Clear All",
     recentRegions: "Recent Regions",
-    recentStations: "Recent Stations"
+    recentStations: "Recent Stations",
+    activityType_page_view: "Page View",
+    activityType_search_transactions: "Search",
+    activityType_region_add: "Add Region",
+    activityType_region_delete: "Delete Region",
+    activityType_rule_create: "Create Rule",
+    activityType_rule_update: "Update Rule",
+    activityType_rule_delete: "Delete Rule",
+    activityType_rule_test: "Test Rule",
+    activityType_preset_create: "Create Preset",
+    activityType_preset_delete: "Delete Preset",
+
+    // Infrastructure Rating
+    infraRatingTitle: "⭐ Nearby Infrastructure Rating Report",
+    infraRatingSubtitle: "Overall location score calculated based on weighted analysis of the shortest distance of key living infrastructures within a 1km radius.",
+    infraTotalScore: "Overall Score",
+    infraGrade: "Grade",
+    infraCategory: "Category",
+    infraScore: "Score",
+    infraCount: "Count",
+    infraMinDistance: "Min Distance",
+    infraWalkMin: "Walk ~{min}m",
+    infraMockNotice: "⚠️ Displaying sample infrastructure data because Kakao API key is not configured.",
+    infraCategorySchool: "School",
+    infraCategoryHospital: "Hospital",
+    infraCategoryMart: "Mart",
+    infraCategoryPharmacy: "Pharmacy",
+    infraCategoryConvStore: "Conv. Store"
   }
 } as const;
 

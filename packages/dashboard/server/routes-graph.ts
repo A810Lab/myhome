@@ -44,7 +44,7 @@ import {
 import type { BatchUpsertItem } from "@myhome/shared";
 import { readPresets, savePreset, deletePreset } from "./graphPresets.js";
 import { readInsights, saveInsight, deleteInsight } from "./graphInsights.js";
-import { findComplexesNearStation, batchGeocodeComplexes, geocodeAddress, findSubwayStationsNearCoords } from "./geocoding.js";
+import { findComplexesNearStation, batchGeocodeComplexes, geocodeAddress, findSubwayStationsNearCoords, getComplexInfraRating } from "./geocoding.js";
 import { generateTextWithGemini } from "./llmClient.js";
 import { graphCache } from "./cache.js";
 
@@ -322,6 +322,7 @@ export function createGraphRouter(): Router {
       // 단지 지리정보 조회 및 지하철역 연동
       let complexInfo = getComplexGeo(complexName, lawdCode);
       let subways: any[] = [];
+      let infraRating: any = null;
 
       if (complexInfo) {
         // 위경도 좌표가 없으면 Lazy Geocoding 수행
@@ -351,10 +352,18 @@ export function createGraphRouter(): Router {
         }
       }
 
+      // 주변 입지 가중 평점 및 등급 산출
+      infraRating = await getComplexInfraRating(
+        complexInfo?.lat ?? null,
+        complexInfo?.lng ?? null,
+        complexName
+      );
+
       const resultPayload = {
         ...data,
         complexInfo,
-        subways
+        subways,
+        infraRating
       };
       graphCache.set(cacheKey, resultPayload);
       res.json(resultPayload);

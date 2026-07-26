@@ -8,7 +8,7 @@ import { fetchActivityLogs, fetchActivityStats } from "../api";
 import { UserActivityLog, ActivityStats } from "../types";
 import { copy } from "../locales/ko";
 
-const locale = "ko";
+const locale = (typeof navigator !== "undefined" && navigator.language.startsWith("ko")) ? "ko" : "en";
 const t = copy[locale];
 
 // Chart colors tailwind compatible
@@ -94,16 +94,16 @@ export function ActivityLogPage() {
   // 로그 유형 포맷터 (한국어/영문 매핑)
   const formatActivityType = (type: string) => {
     const types: Record<string, string> = {
-      page_view: "페이지 뷰 (Page View)",
-      search_transactions: "실거래 검색 (Search)",
-      region_add: "지역 추가 (Add Region)",
-      region_delete: "지역 삭제 (Delete Region)",
-      rule_create: "규칙 생성 (Create Rule)",
-      rule_update: "규칙 수정 (Update Rule)",
-      rule_delete: "규칙 삭제 (Delete Rule)",
-      rule_test: "규칙 테스트 (Test Rule)",
-      preset_create: "프리셋 추가 (Create Preset)",
-      preset_delete: "프리셋 삭제 (Delete Preset)"
+      page_view: t.activityType_page_view || "페이지 뷰",
+      search_transactions: t.activityType_search_transactions || "실거래 검색",
+      region_add: t.activityType_region_add || "지역 추가",
+      region_delete: t.activityType_region_delete || "지역 삭제",
+      rule_create: t.activityType_rule_create || "규칙 생성",
+      rule_update: t.activityType_rule_update || "규칙 수정",
+      rule_delete: t.activityType_rule_delete || "규칙 삭제",
+      rule_test: t.activityType_rule_test || "규칙 테스트",
+      preset_create: t.activityType_preset_create || "프리셋 추가",
+      preset_delete: t.activityType_preset_delete || "프리셋 삭제"
     };
     return types[type] || type;
   };
@@ -281,16 +281,16 @@ export function ActivityLogPage() {
                 데이터 없음
               </div>
             ) : (
-              <div className="h-64 w-full flex flex-col justify-between">
-                <div className="h-44 w-full">
+              <div className="h-64 w-full flex flex-row items-center justify-between gap-4">
+                <div className="h-48 w-[40%] flex-shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={pieChartData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
+                        innerRadius={35}
+                        outerRadius={55}
                         paddingAngle={3}
                         dataKey="value"
                         stroke="none"
@@ -303,12 +303,19 @@ export function ActivityLogPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                {/* 커스텀 레전드 (모바일 화면 최적화) */}
-                <div className="max-h-20 overflow-y-auto px-2 py-1 border-t border-normal/30 flex flex-wrap gap-x-3 gap-y-1.5 text-[10px] text-neutral">
+                {/* 커스텀 레전드 (도넛차트 우측에 1개 라인씩 배치) */}
+                <div className="flex-1 max-h-full overflow-y-auto px-2 py-1 flex flex-col gap-2.5 text-[10px] sm:text-xs text-neutral">
                   {pieChartData.map((item, index) => (
-                    <div key={item.name} className="flex items-center gap-1">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                      <span className="truncate max-w-[120px]">{item.name}: <b>{item.value}건</b></span>
+                    <div key={item.name} className="flex items-center gap-1.5 w-full justify-between">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                        <span className="truncate text-strong dark:text-neutral" title={item.name}>
+                          {item.name}
+                        </span>
+                      </div>
+                      <span className="shrink-0 font-semibold text-neutral ml-auto">
+                        {item.value}건
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -346,16 +353,16 @@ export function ActivityLogPage() {
                 className="w-full bg-normal border border-normal rounded-lg px-3 py-2 text-xs text-strong outline-none focus:ring-1 focus:ring-primary focus:border-primary"
               >
                 <option value="">{t.allTypes || "전체 유형"}</option>
-                <option value="page_view">페이지 뷰 (Page View)</option>
-                <option value="search_transactions">실거래 검색 (Search)</option>
-                <option value="region_add">수집 지역 추가 (Add Region)</option>
-                <option value="region_delete">수집 지역 삭제 (Delete Region)</option>
-                <option value="rule_create">규칙 생성 (Create Rule)</option>
-                <option value="rule_update">규칙 수정 (Update Rule)</option>
-                <option value="rule_delete">규칙 삭제 (Delete Rule)</option>
-                <option value="rule_test">규칙 테스트 (Test Rule)</option>
-                <option value="preset_create">프리셋 추가 (Create Preset)</option>
-                <option value="preset_delete">프리셋 삭제 (Delete Preset)</option>
+                <option value="page_view">{formatActivityType("page_view")}</option>
+                <option value="search_transactions">{formatActivityType("search_transactions")}</option>
+                <option value="region_add">{formatActivityType("region_add")}</option>
+                <option value="region_delete">{formatActivityType("region_delete")}</option>
+                <option value="rule_create">{formatActivityType("rule_create")}</option>
+                <option value="rule_update">{formatActivityType("rule_update")}</option>
+                <option value="rule_delete">{formatActivityType("rule_delete")}</option>
+                <option value="rule_test">{formatActivityType("rule_test")}</option>
+                <option value="preset_create">{formatActivityType("preset_create")}</option>
+                <option value="preset_delete">{formatActivityType("preset_delete")}</option>
               </select>
             </div>
           </div>
@@ -385,7 +392,7 @@ export function ActivityLogPage() {
                     <div key={log.id} className="p-4 space-y-2 text-xs">
                       <div className="flex justify-between items-start">
                         <span className="font-bold text-[11px] px-2 py-0.5 rounded bg-primary/10 text-primary">
-                          {formatActivityType(log.activityType).split(" ")[0]}
+                          {formatActivityType(log.activityType)}
                         </span>
                         <span className="text-[10px] text-assistive font-mono">
                           {new Date(log.createdAt).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
