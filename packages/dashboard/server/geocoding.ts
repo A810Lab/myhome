@@ -72,22 +72,24 @@ function isAddressMatch(stationAddress: string, regionDisplayName: string): bool
   const regionParts = regionDisplayName.split(/\s+/).filter(Boolean);
 
   if (regionParts.length === 0) return false;
-  if (stationParts.length < regionParts.length) return false;
 
-  for (let i = 0; i < regionParts.length; i++) {
-    const sPart = stationParts[i];
-    const rPart = regionParts[i];
+  for (const rPart of regionParts) {
+    const isSido = ["서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"].some(
+      s => rPart.startsWith(s)
+    );
 
-    if (i === 0) {
-      if (normalizeSido(sPart) !== normalizeSido(rPart)) {
-        return false;
-      }
+    let matched = false;
+    if (isSido) {
+      matched = stationParts.some(sPart => normalizeSido(sPart) === normalizeSido(rPart));
     } else {
-      if (sPart !== rPart && !sPart.includes(rPart) && !rPart.includes(sPart)) {
-        return false;
-      }
+      matched = stationParts.some(sPart => sPart.includes(rPart) || rPart.includes(sPart));
+    }
+
+    if (!matched) {
+      return false;
     }
   }
+
   return true;
 }
 
@@ -776,7 +778,7 @@ function calculateCategoryScore(code: string, minDistance: number | null, count:
 function generateMockInfraRating(complexName: string) {
   const hash = simpleStringHash(complexName);
   const categoryConfigs = [
-    { code: "SW8", name: "지하철역", weight: 1.5, radius: 1500, baseDist: 150, countMax: 4 },
+    { code: "SW8", name: "역세권", weight: 1.5, radius: 1500, baseDist: 150, countMax: 4 },
     { code: "SC4", name: "학교", weight: 1.0, radius: 500, baseDist: 100, countMax: 3 },
     { code: "HP8", name: "병원", weight: 0.8, radius: 1000, baseDist: 200, countMax: 5 },
     { code: "MT1", name: "대형마트", weight: 0.7, radius: 1500, baseDist: 400, countMax: 2 }
@@ -796,11 +798,128 @@ function generateMockInfraRating(complexName: string) {
     let count = 0;
     let minDistance: number | null = null;
     let score = 0;
+    let details: any = null;
 
     if (hasFacilities) {
       count = (categoryHash % config.countMax) + 1;
       minDistance = simulatedDist;
-      score = calculateCategoryScore(config.code, minDistance, count);
+      
+      if (config.code === "SW8") {
+        const isGtxExist = (categoryHash % 4) === 0;
+        const gtxCount = isGtxExist ? 1 : 0;
+        const gtxMinDistance = isGtxExist ? simulatedDist + 500 : null;
+        
+        const isRailExist = (categoryHash % 3) === 0;
+        const railCount = isRailExist ? 1 : 0;
+        const railMinDistance = isRailExist ? simulatedDist + 300 : null;
+        
+        const metroCount = count;
+        const metroMinDistance = simulatedDist;
+        
+        details = {
+          metroCount,
+          metroMinDistance,
+          gtxCount,
+          gtxMinDistance,
+          railCount,
+          railMinDistance
+        };
+      } else if (config.code === "HP8") {
+        const isBigHospitalExist = (categoryHash % 3) > 0;
+        const generalHospitalCount = isBigHospitalExist ? 1 : 0;
+        const generalHospitalMinDistance = isBigHospitalExist ? simulatedDist + 200 : null;
+        const localClinicCount = count;
+        const localClinicMinDistance = simulatedDist;
+        const pharmacyCount = count * 2;
+        const pharmacyMinDistance = simulatedDist;
+        
+        let sLarge = 0;
+        if (generalHospitalMinDistance !== null) {
+          if (generalHospitalMinDistance <= 500) sLarge = 100;
+          else if (generalHospitalMinDistance <= 1000) sLarge = 80;
+        }
+        let sClinic = 0;
+        if (localClinicMinDistance !== null) {
+          const d = localClinicMinDistance;
+          if (d <= 150) sClinic = 100;
+          else if (d <= 300) sClinic = 80;
+          else if (d <= 500) sClinic = 60;
+          else if (d <= 1000) sClinic = 40;
+        }
+        
+        if (generalHospitalMinDistance !== null) {
+          score = Math.min(100, Math.round(sLarge * 0.7 + sClinic * 0.3 + 10));
+        } else {
+          score = sClinic;
+        }
+        
+        details = {
+          generalHospitalCount,
+          generalHospitalMinDistance,
+          localClinicCount,
+          localClinicMinDistance,
+          pharmacyCount,
+          pharmacyMinDistance
+        };
+      } else if (config.code === "MT1") {
+        const isLargeMartExist = (categoryHash % 2) > 0;
+        const largeMartCount = isLargeMartExist ? 1 : 0;
+        const largeMartMinDistance = isLargeMartExist ? simulatedDist + 300 : null;
+        const ssmCount = count;
+        const ssmMinDistance = simulatedDist;
+        const convenienceCount = count * 3;
+        const convenienceMinDistance = simulatedDist;
+        
+        let sMart = 0;
+        if (largeMartMinDistance !== null) {
+          const d = largeMartMinDistance;
+          if (d <= 500) sMart = 100;
+          else if (d <= 1000) sMart = 80;
+          else if (d <= 1500) sMart = 60;
+        }
+        let sSsm = 0;
+        if (ssmMinDistance !== null) {
+          const d = ssmMinDistance;
+          if (d <= 300) sSsm = 100;
+          else if (d <= 700) sSsm = 80;
+          else if (d <= 1500) sSsm = 50;
+        }
+        
+        if (largeMartMinDistance !== null) {
+          score = Math.min(100, Math.round(sMart * 0.7 + sSsm * 0.3));
+        } else {
+          score = Math.round(sSsm * 0.7);
+        }
+        
+        details = {
+          largeMartCount,
+          largeMartMinDistance,
+          ssmCount,
+          ssmMinDistance,
+          convenienceCount,
+          convenienceMinDistance
+        };
+      } else if (config.code === "SC4") {
+        const elementaryCount = (categoryHash % 2) + 1;
+        const elementaryMinDistance = simulatedDist;
+        const middleCount = (categoryHash % 2);
+        const middleMinDistance = middleCount > 0 ? simulatedDist + 150 : null;
+        const highCount = (categoryHash % 2);
+        const highMinDistance = highCount > 0 ? simulatedDist + 300 : null;
+        
+        score = calculateCategoryScore(config.code, minDistance, count);
+        
+        details = {
+          elementaryCount,
+          elementaryMinDistance,
+          middleCount,
+          middleMinDistance,
+          highCount,
+          highMinDistance
+        };
+      } else {
+        score = calculateCategoryScore(config.code, minDistance, count);
+      }
     } else {
       score = 0;
     }
@@ -809,7 +928,8 @@ function generateMockInfraRating(complexName: string) {
       name: config.name,
       score,
       count,
-      minDistance
+      minDistance,
+      details
     };
 
     weightedScoreSum += score * config.weight;
@@ -858,7 +978,7 @@ export async function getComplexInfraRating(
   }
 
   const categoryConfigs = [
-    { code: "SW8", name: "지하철역", weight: 1.5, radius: 1500 },
+    { code: "SW8", name: "역세권", weight: 1.5, radius: 1500 },
     { code: "SC4", name: "학교", weight: 1.0, radius: 500 },
     { code: "HP8", name: "병원", weight: 0.8, radius: 1000 },
     { code: "MT1", name: "대형마트", weight: 0.7, radius: 1500 }
@@ -879,13 +999,241 @@ export async function getComplexInfraRating(
       let count = 0;
       let minDistance: number | null = null;
       let score = 0;
+      let details: any = null;
 
       if (res.ok) {
         const body = await res.json();
         if (body.documents && body.documents.length > 0) {
-          count = body.meta?.total_count || body.documents.length;
-          minDistance = parseInt(body.documents[0].distance) || 0;
-          score = calculateCategoryScore(config.code, minDistance, count);
+          const docs = body.documents;
+          
+          if (config.code === "SW8") {
+            const gtxDocs = docs.filter((doc: any) => {
+              const cat = doc.category_name || "";
+              const name = doc.place_name || "";
+              return cat.includes("GTX") || name.includes("GTX");
+            });
+            const gtxCount = gtxDocs.length;
+            const gtxMinDistance = gtxDocs.length > 0 ? (parseInt(gtxDocs[0].distance) || 0) : null;
+            
+            const railDocs = docs.filter((doc: any) => {
+              const cat = doc.category_name || "";
+              const name = doc.place_name || "";
+              if (cat.includes("GTX") || name.includes("GTX")) return false;
+              return cat.includes("KTX") || cat.includes("SRT") || cat.includes("ITX") || 
+                     name.includes("KTX") || name.includes("SRT") || name.includes("ITX") || 
+                     name.includes("기차역") || name.includes("철도역") || 
+                     name.endsWith("철도") || name.includes("일반철도");
+            });
+            const railCount = railDocs.length;
+            const railMinDistance = railDocs.length > 0 ? (parseInt(railDocs[0].distance) || 0) : null;
+            
+            const metroDocs = docs.filter((doc: any) => {
+              const cat = doc.category_name || "";
+              const name = doc.place_name || "";
+              const isGtx = cat.includes("GTX") || name.includes("GTX");
+              const isRail = cat.includes("KTX") || cat.includes("SRT") || cat.includes("ITX") || 
+                             name.includes("KTX") || name.includes("SRT") || name.includes("ITX") || 
+                             name.includes("기차역") || name.includes("철도역") || 
+                             name.endsWith("철도") || name.includes("일반철도");
+              return !isGtx && !isRail;
+            });
+            const metroCount = metroDocs.length;
+            const metroMinDistance = metroDocs.length > 0 ? (parseInt(metroDocs[0].distance) || 0) : null;
+            
+            count = docs.length;
+            minDistance = docs.length > 0 ? (parseInt(docs[0].distance) || 0) : null;
+            score = calculateCategoryScore(config.code, minDistance, count);
+            
+            details = {
+              metroCount,
+              metroMinDistance,
+              gtxCount,
+              gtxMinDistance,
+              railCount,
+              railMinDistance
+            };
+          } else if (config.code === "HP8") {
+            const validDocs = docs.filter((doc: any) => !(doc.category_name || "").includes("동물병원"));
+            count = validDocs.length;
+            minDistance = validDocs.length > 0 ? (parseInt(validDocs[0].distance) || 0) : null;
+            
+            const generalDocs = validDocs.filter((doc: any) => {
+              const cat = doc.category_name || "";
+              const name = doc.place_name || "";
+              return cat.includes("종합병원") || cat.includes("대학병원") ||
+                     name.includes("대학병원") || name.includes("종합병원") || name.includes("의료원") ||
+                     name.includes("세브란스") || name.includes("성모병원") || name.includes("아산병원") || name.includes("삼성서울병원");
+            });
+            const generalHospitalCount = generalDocs.length;
+            const generalHospitalMinDistance = generalDocs.length > 0 ? (parseInt(generalDocs[0].distance) || 0) : null;
+            
+            const clinicDocs = validDocs.filter((doc: any) => {
+              const cat = doc.category_name || "";
+              const name = doc.place_name || "";
+              const isBig = cat.includes("종합병원") || cat.includes("대학병원") ||
+                            name.includes("대학병원") || name.includes("종합병원") || name.includes("의료원") ||
+                            name.includes("세브란스") || name.includes("성모병원") || name.includes("아산병원") || name.includes("삼성서울병원");
+              return !isBig;
+            });
+            const localClinicCount = clinicDocs.length;
+            const localClinicMinDistance = clinicDocs.length > 0 ? (parseInt(clinicDocs[0].distance) || 0) : null;
+            
+            let pharmacyCount = 0;
+            let pharmacyMinDistance: number | null = null;
+            try {
+              const pUrl = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=PM9&x=${lng}&y=${lat}&radius=500&sort=distance`;
+              const pRes = await fetch(pUrl, {
+                headers: { Authorization: `KakaoAK ${apiKey}` },
+                signal: AbortSignal.timeout(3000),
+              });
+              if (pRes.ok) {
+                const pBody = await pRes.json();
+                if (pBody.documents && pBody.documents.length > 0) {
+                  pharmacyCount = pBody.meta?.total_count || pBody.documents.length;
+                  pharmacyMinDistance = parseInt(pBody.documents[0].distance) || 0;
+                }
+              }
+            } catch (pErr) {
+              console.error("[Geocoding] 약국 추가 조회 실패:", pErr);
+            }
+            
+            let sLarge = 0;
+            if (generalHospitalMinDistance !== null) {
+              if (generalHospitalMinDistance <= 500) sLarge = 100;
+              else if (generalHospitalMinDistance <= 1000) sLarge = 80;
+            }
+            
+            let sClinic = 0;
+            if (localClinicMinDistance !== null) {
+              const d = localClinicMinDistance;
+              if (d <= 150) sClinic = 100;
+              else if (d <= 300) sClinic = 80;
+              else if (d <= 500) sClinic = 60;
+              else if (d <= 1000) sClinic = 40;
+            }
+            
+            if (generalHospitalMinDistance !== null) {
+              score = Math.min(100, Math.round(sLarge * 0.7 + sClinic * 0.3 + 10));
+            } else {
+              score = sClinic;
+            }
+            
+            details = {
+              generalHospitalCount,
+              generalHospitalMinDistance,
+              localClinicCount,
+              localClinicMinDistance,
+              pharmacyCount,
+              pharmacyMinDistance
+            };
+            
+          } else if (config.code === "MT1") {
+            const largeDocs = docs.filter((doc: any) => {
+              const cat = doc.category_name || "";
+              const name = doc.place_name || "";
+              const isSSM = name.includes("익스프레스") || name.includes("에브리데이") || name.includes("노브랜드") || name.includes("메트로") || name.includes("프레시") || name.includes("슈퍼");
+              const hasMartCat = cat.includes("대형마트");
+              const hasLargeBrand = name.includes("이마트") || name.includes("홈플러스") || name.includes("롯데마트") || name.includes("코스트코") || name.includes("트레이더스") || name.includes("메가마트");
+              return (hasMartCat || hasLargeBrand) && !isSSM;
+            });
+            const largeMartCount = largeDocs.length;
+            const largeMartMinDistance = largeDocs.length > 0 ? (parseInt(largeDocs[0].distance) || 0) : null;
+            
+            const ssmDocs = docs.filter((doc: any) => {
+              const cat = doc.category_name || "";
+              const name = doc.place_name || "";
+              const isSSM = name.includes("익스프레스") || name.includes("에브리데이") || name.includes("노브랜드") || name.includes("메트로") || name.includes("프레시") || name.includes("슈퍼") || cat.includes("대형슈퍼") || cat.includes("슈퍼마켓");
+              const hasMartCat = cat.includes("대형마트");
+              const hasLargeBrand = name.includes("이마트") || name.includes("홈플러스") || name.includes("롯데마트") || name.includes("코스트코") || name.includes("트레이더스") || name.includes("메가마트");
+              const isLarge = (hasMartCat || hasLargeBrand) && !isSSM;
+              return !isLarge && (isSSM || cat.includes("대형슈퍼") || cat.includes("슈퍼마켓"));
+            });
+            const ssmCount = ssmDocs.length;
+            const ssmMinDistance = ssmDocs.length > 0 ? (parseInt(ssmDocs[0].distance) || 0) : null;
+            
+            let convenienceCount = 0;
+            let convenienceMinDistance: number | null = null;
+            try {
+              const cUrl = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=CS2&x=${lng}&y=${lat}&radius=300&sort=distance`;
+              const cRes = await fetch(cUrl, {
+                headers: { Authorization: `KakaoAK ${apiKey}` },
+                signal: AbortSignal.timeout(3000),
+              });
+              if (cRes.ok) {
+                const cBody = await cRes.json();
+                if (cBody.documents && cBody.documents.length > 0) {
+                  convenienceCount = cBody.meta?.total_count || cBody.documents.length;
+                  convenienceMinDistance = parseInt(cBody.documents[0].distance) || 0;
+                }
+              }
+            } catch (cErr) {
+              console.error("[Geocoding] 편의점 추가 조회 실패:", cErr);
+            }
+            
+            count = docs.length;
+            minDistance = docs.length > 0 ? (parseInt(docs[0].distance) || 0) : null;
+            
+            let sMart = 0;
+            if (largeMartMinDistance !== null) {
+              const d = largeMartMinDistance;
+              if (d <= 500) sMart = 100;
+              else if (d <= 1000) sMart = 80;
+              else if (d <= 1500) sMart = 60;
+            }
+            
+            let sSsm = 0;
+            if (ssmMinDistance !== null) {
+              const d = ssmMinDistance;
+              if (d <= 300) sSsm = 100;
+              else if (d <= 700) sSsm = 80;
+              else if (d <= 1500) sSsm = 50;
+            }
+            
+            if (largeMartMinDistance !== null) {
+              score = Math.min(100, Math.round(sMart * 0.7 + sSsm * 0.3));
+            } else {
+              score = Math.round(sSsm * 0.7);
+            }
+            
+            details = {
+              largeMartCount,
+              largeMartMinDistance,
+              ssmCount,
+              ssmMinDistance,
+              convenienceCount,
+              convenienceMinDistance
+            };
+            
+          } else if (config.code === "SC4") {
+            count = docs.length;
+            minDistance = docs.length > 0 ? (parseInt(docs[0].distance) || 0) : null;
+            score = calculateCategoryScore(config.code, minDistance, count);
+            
+            const elemDocs = docs.filter((doc: any) => (doc.category_name || "").includes("초등학교"));
+            const elementaryCount = elemDocs.length;
+            const elementaryMinDistance = elemDocs.length > 0 ? (parseInt(elemDocs[0].distance) || 0) : null;
+            
+            const middDocs = docs.filter((doc: any) => (doc.category_name || "").includes("중학교"));
+            const middleCount = middDocs.length;
+            const middleMinDistance = middDocs.length > 0 ? (parseInt(middDocs[0].distance) || 0) : null;
+            
+            const highDocs = docs.filter((doc: any) => (doc.category_name || "").includes("고등학교"));
+            const highCount = highDocs.length;
+            const highMinDistance = highDocs.length > 0 ? (parseInt(highDocs[0].distance) || 0) : null;
+            
+            details = {
+              elementaryCount,
+              elementaryMinDistance,
+              middleCount,
+              middleMinDistance,
+              highCount,
+              highMinDistance
+            };
+          } else {
+            count = body.meta?.total_count || docs.length;
+            minDistance = parseInt(docs[0].distance) || 0;
+            score = calculateCategoryScore(config.code, minDistance, count);
+          }
         }
       }
 
@@ -893,7 +1241,8 @@ export async function getComplexInfraRating(
         name: config.name,
         score,
         count,
-        minDistance
+        minDistance,
+        details
       };
 
       weightedScoreSum += score * config.weight;

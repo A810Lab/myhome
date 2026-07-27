@@ -196,6 +196,45 @@ export async function runCollector(): Promise<{ totalCollected: number; totalUps
             // 월단위 전체를 단일 트랜잭션으로 묶어 fsync 병목 해소
             await upsertTransactionBatch(regionInfo, batchItems);
             totalUpserted += batchItems.length;
+
+            // 백그라운드 분양면적 매핑 비동기 수집 실행 (API 한계 대처 및 병렬 처리)
+            const uniqueMappings = new Map<string, { complexId: string; complexName: string; areaM2: number; dongName?: string; jibun?: string }>();
+            for (const item of batchItems) {
+              if (item.tx.areaM2) {
+                const complexId = `${target.lawdCode}|${item.complexName}`;
+                const key = `${complexId}|${item.tx.areaM2.toFixed(2)}`;
+                if (!uniqueMappings.has(key)) {
+                  uniqueMappings.set(key, {
+                    complexId,
+                    complexName: item.complexName,
+                    areaM2: item.tx.areaM2,
+                    dongName: item.addressInfo?.dongName,
+                    jibun: item.addressInfo?.jibun,
+                  });
+                }
+              }
+            }
+
+            (async () => {
+              const { syncSupplyArea } = await import("@myhome/shared");
+              for (const mapping of uniqueMappings.values()) {
+                try {
+                  await syncSupplyArea({
+                    complexId: mapping.complexId,
+                    complexName: mapping.complexName,
+                    lawdCode: target.lawdCode,
+                    dongName: mapping.dongName,
+                    jibun: mapping.jibun,
+                    areaM2: mapping.areaM2,
+                    regionDisplayName: target.displayName,
+                  });
+                  // API 서버 과부하 방지를 위한 200ms 지연
+                  await new Promise((resolve) => setTimeout(resolve, 200));
+                } catch (err: any) {
+                  console.warn(`[Collector] 분양면적 매핑 수집 실패 (${mapping.complexName}):`, err.message);
+                }
+              }
+            })();
           } catch (err: any) {
             console.error(`[Collector] SQLite 배치 적재 오류 (${target.displayName} / ${month}): ${err.message}`);
           }

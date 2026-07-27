@@ -159,10 +159,12 @@ export function loadGraphTopology(filter: GraphFilter) {
   return request<GraphTopologyData>(`/api/graph/topology?${params.toString()}`);
 }
 
-export function loadComplexDetail(complexName: string, lawdCode?: string, area?: number) {
+export function loadComplexDetail(complexName: string, lawdCode?: string, area?: number, startDate?: string, endDate?: string) {
   const params = new URLSearchParams();
   if (lawdCode) params.set("lawdCode", lawdCode);
   if (area !== undefined && area !== null) params.set("area", String(area));
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
   const query = params.toString() ? `?${params.toString()}` : "";
   return request<any>(`/api/graph/complex/${encodeURIComponent(complexName)}/detail${query}`);
 }

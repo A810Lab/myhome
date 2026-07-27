@@ -236,12 +236,8 @@ export default function NearbyStationTab({ onSelectComplex, onNavigateToRules }:
         stationLawdCode: result.stationLawdCode ?? null,
       });
 
-      // 실시간 검색이 활성화되어 있고 실시간 단지가 있으면 live 탭 기본 선택, 없으면 db 탭
-      if (enableLive && (result.liveComplexes || []).length > 0) {
-        setActiveListTab("live");
-      } else {
-        setActiveListTab("db");
-      }
+      // DB 집계 단지(사전 집계 기반)를 항상 우선 노출하므로 db 탭을 기본 선택
+      setActiveListTab("db");
       
       saveRecentStation(queryStr);
       setRecentStations(loadRecentStations());
@@ -871,13 +867,13 @@ export default function NearbyStationTab({ onSelectComplex, onNavigateToRules }:
           {/* 통계 요약 카드 */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatCard
-              label="DB 집계 단지"
+              label={t.dbAggregateTab || "사전 집계 기반"}
               value={`${searchResult.complexes.length} 개`}
               icon={Database}
               tone="good"
             />
             <StatCard
-              label="실시간 발견 단지"
+              label={t.liveSearchTab || "실시간 조회 기반"}
               value={`${searchResult.liveComplexes.length} 개`}
               icon={Zap}
               tone={searchResult.liveComplexes.length > 0 ? "good" : "neutral" as any}
@@ -899,23 +895,6 @@ export default function NearbyStationTab({ onSelectComplex, onNavigateToRules }:
                 <div className="flex items-center border-b border-normal shrink-0">
                   <button
                     type="button"
-                    onClick={() => setActiveListTab("live")}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                      activeListTab === "live"
-                        ? "border-primary text-primary"
-                        : "border-transparent text-neutral hover:text-strong"
-                    }`}
-                  >
-                    <Zap size={12} />
-                    실시간 단지
-                    <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
-                      activeListTab === "live" ? "bg-primary text-white" : "bg-alternative text-neutral"
-                    }`}>
-                      {searchResult.liveComplexes.length}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setActiveListTab("db")}
                     className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-bold border-b-2 transition-colors ${
                       activeListTab === "db"
@@ -924,11 +903,28 @@ export default function NearbyStationTab({ onSelectComplex, onNavigateToRules }:
                     }`}
                   >
                     <Database size={12} />
-                    DB 집계 단지
+                    {t.dbAggregateTab || "사전 집계 기반"}
                     <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
                       activeListTab === "db" ? "bg-emerald-500 text-white" : "bg-alternative text-neutral"
                     }`}>
                       {searchResult.complexes.length}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveListTab("live")}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-bold border-b-2 transition-colors ${
+                      activeListTab === "live"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-neutral hover:text-strong"
+                    }`}
+                  >
+                    <Zap size={12} />
+                    {t.liveSearchTab || "실시간 조회 기반"}
+                    <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
+                      activeListTab === "live" ? "bg-primary text-white" : "bg-alternative text-neutral"
+                    }`}>
+                      {searchResult.liveComplexes.length}
                     </span>
                   </button>
                 </div>

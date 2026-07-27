@@ -65,7 +65,19 @@ const i18n = {
     infraCategoryMart: "대형마트 (MT1)",
     infraCategoryPharmacy: "약국 (PM9)",
     infraCategoryConvStore: "편의점 (CS2)",
-    infraCategorySubway: "지하철역 (SW8)",
+    infraCategorySubway: "역세권 (SW8)",
+    infraDetailGeneralHospital: "종합/대학병원",
+    infraDetailLocalClinic: "일반 병/의원",
+    infraDetailLargeMart: "대형마트",
+    infraDetailSSM: "대형슈퍼(SSM)",
+    infraDetailElementary: "초등학교",
+    infraDetailMiddle: "중학교",
+    infraDetailHigh: "고등학교",
+    infraDetailMetro: "지하철(일반)",
+    infraDetailGtx: "GTX",
+    infraDetailRail: "광역/고속철도(기차)",
+    infraDetailPharmacy: "약국",
+    infraDetailConvStore: "편의점",
     
     // 입지 평가 정보 모달 번역
     infraModalTitle: "📊 입지 평가 점수 산출 기준",
@@ -75,7 +87,7 @@ const i18n = {
     infraModalFormulaMath: "부문 점수 = 최단거리 점수",
     infraModalRadiusTitle: "2. 시설별 특화 반경 및 거리 감점 기준",
     infraModalRadiusDesc: "생활 밀착도에 따른 전용 반경 내에서 가까울수록 고득점을 획득합니다 (반경 초과 시 0점).",
-    infraModalSubwayDesc: "지하철역 (반경 1500m): 250m 이내 100점, 500m 이내 85점, 1000m 이내 65점, 1500m 이내 40점",
+    infraModalSubwayDesc: "역세권 (반경 1500m): 250m 이내 100점, 500m 이내 85점, 1000m 이내 65점, 1500m 이내 40점",
     infraModalSchoolDesc: "학교 (반경 500m): 150m 이내 100점, 300m 이내 85점, 500m 이내 60점",
     infraModalHospitalDesc: "병원 (반경 1000m): 300m 이내 100점, 500m 이내 80점, 1000m 이내 50점",
     infraModalMartDesc: "대형마트 (반경 1500m): 500m 이내 100점, 1000m 이내 80점, 1500m 이내 50점",
@@ -85,7 +97,7 @@ const i18n = {
     infraModalCountDesc: "반경 내 시설 1개당 20점이 부여되며, 5개 이상일 시 만점(100점)을 획득합니다 (최대 20점 기여).",
     infraModalWeightTitle: "3. 종합 등급 가중치 기준",
     infraModalWeightDesc: "주거 선호도에 따라 가중 평균하여 최종 등급(S~D)을 산출합니다.",
-    infraModalWeightList: "지하철역 (1.5) > 학교 (1.0) > 병원 (0.8) > 대형마트 (0.7)",
+    infraModalWeightList: "역세권 (1.5) > 학교 (1.0) > 병원 (0.8) > 대형마트 (0.7)",
     close: "닫기"
   },
   en: {
@@ -134,7 +146,19 @@ const i18n = {
     infraCategoryMart: "Mart (MT1)",
     infraCategoryPharmacy: "Pharmacy (PM9)",
     infraCategoryConvStore: "Conv. Store (CS2)",
-    infraCategorySubway: "Subway (SW8)",
+    infraCategorySubway: "Station Area (SW8)",
+    infraDetailGeneralHospital: "General/Univ. Hospital",
+    infraDetailLocalClinic: "Local Clinic",
+    infraDetailLargeMart: "Large Mart",
+    infraDetailSSM: "SSM Supermarket",
+    infraDetailElementary: "Elementary School",
+    infraDetailMiddle: "Middle School",
+    infraDetailHigh: "High School",
+    infraDetailMetro: "Subway (Metro)",
+    infraDetailGtx: "GTX",
+    infraDetailRail: "Rail/Train",
+    infraDetailPharmacy: "Pharmacy",
+    infraDetailConvStore: "Convenience Store",
     
     // Infrastructure rating modal translations
     infraModalTitle: "📊 Location Score Calculation Standards",
@@ -144,7 +168,7 @@ const i18n = {
     infraModalFormulaMath: "Category Score = Distance Score",
     infraModalRadiusTitle: "2. Specific Radius & Distance Penalty",
     infraModalRadiusDesc: "Points decrease as distance increases within the specialized radius (0 points if outside).",
-    infraModalSubwayDesc: "Subway (Radius 1500m): <=250m 100pts, <=500m 85pts, <=1000m 65pts, <=1500m 40pts",
+    infraModalSubwayDesc: "Station Area (Radius 1500m): <=250m 100pts, <=500m 85pts, <=1000m 65pts, <=1500m 40pts",
     infraModalSchoolDesc: "School (Radius 500m): <=150m 100pts, <=300m 85pts, <=500m 60pts",
     infraModalHospitalDesc: "Hospital (Radius 1000m): <=300m 100pts, <=500m 80pts, <=1000m 50pts",
     infraModalMartDesc: "Mart (Radius 1500m): <=500m 100pts, <=1000m 80pts, <=1500m 50pts",
@@ -154,7 +178,7 @@ const i18n = {
     infraModalCountDesc: "Each facility within the radius gives 20pts, up to 100pts for 5+ facilities (contributing up to 20pts to final score).",
     infraModalWeightTitle: "3. Weighted Average for Final Grade",
     infraModalWeightDesc: "Infrastructures are weighted according to residential preference to calculate the overall grade (S to D).",
-    infraModalWeightList: "Subway (1.5) > School (1.0) > Hospital (0.8) > Mart (0.7)",
+    infraModalWeightList: "Station Area (1.5) > School (1.0) > Hospital (0.8) > Mart (0.7)",
     close: "Close"
   }
 };
@@ -184,6 +208,9 @@ interface ComplexTabProps {
   initialComplexName?: string;
   lawdCode?: string;
   areaUnit?: "pyeong" | "m2";
+  areaType?: "supply" | "dedicated";
+  startDate?: string;
+  endDate?: string;
 }
 
 const BoxPlotShape = (props: any) => {
@@ -338,10 +365,28 @@ const BoxPlotTooltip = ({ active, payload, label, unit, type }: any) => {
   );
 };
 
-export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit = "pyeong" }: ComplexTabProps) {
+export default function ComplexTab({
+  initialComplexName = "",
+  lawdCode,
+  areaUnit = "pyeong",
+  areaType = "supply",
+  startDate,
+  endDate,
+}: ComplexTabProps) {
   const formatSizeString = (sizeStr: string, unit: "pyeong" | "m2") => {
-    const num = parseFloat(sizeStr);
+    let num = parseFloat(sizeStr);
     if (isNaN(num)) return sizeStr;
+
+    if (areaType === "supply" && detailData?.areaBreakdown) {
+      const cleanSize = sizeStr.endsWith("㎡") ? sizeStr : `${Math.round(num)}㎡`;
+      const matched = detailData.areaBreakdown.find((b: any) => b.area === cleanSize);
+      if (matched && matched.supplyArea) {
+        num = parseFloat(matched.supplyArea);
+      } else {
+        num = num / 0.78; // fallback
+      }
+    }
+
     if (unit === "pyeong") {
       return `${Math.round(num / 3.305785)}평`;
     }
@@ -637,7 +682,7 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
 
   const fetchDetail = async (name: string, area?: number) => {
     if (!name.trim()) return;
-    const cacheKey = `${name}_${area !== undefined ? area : "all"}`;
+    const cacheKey = `${name}_${area !== undefined ? area : "all"}_${startDate ?? ""}_${endDate ?? ""}`;
 
     if (cache[cacheKey]) {
       setDetailData(cache[cacheKey]);
@@ -648,7 +693,7 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
     setLoading(true);
     setError("");
     try {
-      const res = await loadComplexDetail(name, lawdCode, area);
+      const res = await loadComplexDetail(name, lawdCode, area, startDate, endDate);
       setCache((prev) => ({ ...prev, [cacheKey]: res }));
       setDetailData(res);
       setComplexName(name);
@@ -688,7 +733,7 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
       setDetailData(null);
       setComplexName("");
     }
-  }, [initialComplexName, selectedArea, lawdCode]);
+  }, [initialComplexName, selectedArea, lawdCode, startDate, endDate]);
 
   // 빈 상태
   if (!initialComplexName && !loading && !detailData) {
@@ -741,6 +786,30 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
               </span>
             )}
           </div>
+          {detailData?.complexInfo && (detailData.complexInfo.totalHouseholds || detailData.complexInfo.parkingPerHousehold || detailData.complexInfo.useApprovalDate) && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-2 text-[10px] font-bold text-neutral">
+              {detailData.complexInfo.totalHouseholds && (
+                <span className="flex items-center gap-1 bg-alternative border border-normal px-2 py-0.5 rounded-md">
+                  🏠 {detailData.complexInfo.totalHouseholds.toLocaleString()}세대
+                </span>
+              )}
+              {detailData.complexInfo.parkingPerHousehold && (
+                <span className="flex items-center gap-1 bg-alternative border border-normal px-2 py-0.5 rounded-md" title={`총 주차대수: ${detailData.complexInfo.totalParking}대`}>
+                  🚗 주차 {detailData.complexInfo.parkingPerHousehold}대
+                </span>
+              )}
+              {detailData.complexInfo.useApprovalDate && (
+                <span className="flex items-center gap-1 bg-alternative border border-normal px-2 py-0.5 rounded-md">
+                  📅 {detailData.complexInfo.useApprovalDate.substring(0, 7)} 준공 
+                  {(() => {
+                    const year = parseInt(detailData.complexInfo.useApprovalDate.substring(0, 4));
+                    const age = isNaN(year) ? null : new Date().getFullYear() - year + 1;
+                    return age !== null ? ` (${age}년차)` : "";
+                  })()}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 크기 선택 탭 바 (실제 단지 평수 목록으로 가로 스크롤 대응) */}
@@ -870,6 +939,160 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
                       </div>
                     </div>
 
+                    {/* 세부 통계 정보 (details가 존재하는 경우) */}
+                    {info.details && (
+                      <div className="border-t border-normal/30 pt-2.5 space-y-1.5 text-[10px] text-neutral">
+                        {item.code === "SW8" && (
+                          <>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                🚇 {t("infraDetailMetro")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.metroCount}개 
+                                {info.details.metroMinDistance !== null 
+                                  ? ` (${info.details.metroMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                🚄 {t("infraDetailGtx")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.gtxCount}개 
+                                {info.details.gtxMinDistance !== null 
+                                  ? ` (${info.details.gtxMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                🚂 {t("infraDetailRail")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.railCount}개 
+                                {info.details.railMinDistance !== null 
+                                  ? ` (${info.details.railMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                        {item.code === "SC4" && (
+                          <>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                🎒 {t("infraDetailElementary")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.elementaryCount}개 
+                                {info.details.elementaryMinDistance !== null 
+                                  ? ` (${info.details.elementaryMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                ✏️ {t("infraDetailMiddle")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.middleCount}개 
+                                {info.details.middleMinDistance !== null 
+                                  ? ` (${info.details.middleMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                🎓 {t("infraDetailHigh")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.highCount}개 
+                                {info.details.highMinDistance !== null 
+                                  ? ` (${info.details.highMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                        {item.code === "HP8" && (
+                          <>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                🏥 {t("infraDetailGeneralHospital")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.generalHospitalCount}개 
+                                {info.details.generalHospitalMinDistance !== null 
+                                  ? ` (${info.details.generalHospitalMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                🩺 {t("infraDetailLocalClinic")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.localClinicCount}개 
+                                {info.details.localClinicMinDistance !== null 
+                                  ? ` (${info.details.localClinicMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                💊 {t("infraDetailPharmacy")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.pharmacyCount}개 
+                                {info.details.pharmacyMinDistance !== null 
+                                  ? ` (${info.details.pharmacyMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                        {item.code === "MT1" && (
+                          <>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                🛒 {t("infraDetailLargeMart")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.largeMartCount}개 
+                                {info.details.largeMartMinDistance !== null 
+                                  ? ` (${info.details.largeMartMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                🏬 {t("infraDetailSSM")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.ssmCount}개 
+                                {info.details.ssmMinDistance !== null 
+                                  ? ` (${info.details.ssmMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-assistive flex items-center gap-1">
+                                🏪 {t("infraDetailConvStore")}
+                              </span>
+                              <span className="font-semibold text-strong">
+                                {info.details.convenienceCount}개 
+                                {info.details.convenienceMinDistance !== null 
+                                  ? ` (${info.details.convenienceMinDistance}m)` 
+                                  : " (-)"}
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
                     {/* 거리 및 개수 통계 */}
                     <div className="border-t border-normal/50 pt-2.5 flex items-center justify-between text-[11px] text-neutral font-medium">
                       <div className="flex flex-col gap-0.5 min-w-0">
@@ -897,7 +1120,7 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
 
       {/* 지도 및 입지 분석 섹션 (단지 정보가 존재할 경우 표시) */}
       {detailData.complexInfo && (
-        <SectionCard title="🗺️ 단지 주변 입지 분석 (지하철역 및 인프라)">
+        <SectionCard title="🗺️ 단지 주변 입지 분석 (역세권 및 인프라)">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             {/* 지도 컨테이너 */}
             <div className="lg:col-span-2 space-y-4">
@@ -943,15 +1166,15 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
               )}
             </div>
 
-            {/* 인근 지하철역 정보 패널 */}
+            {/* 인근 역세권 정보 패널 */}
             <div className="flex flex-col justify-between gap-4 lg:h-[400px]">
               <div>
                 <h3 className="text-sm font-bold text-strong flex items-center gap-1.5 mb-2">
                   <Train size={16} className="text-primary" />
-                  <span>인근 지하철역 (반경 2km 이내)</span>
+                  <span>인근 역세권 (반경 2km 이내)</span>
                 </h3>
                 <p className="text-xs text-neutral mb-3 leading-relaxed">
-                  단지 기준 직선 반경 2km 이내에 위치한 지하철역 목록입니다. 도보/차량 시간은 직선거리 기준 추정값입니다.
+                  단지 기준 직선 반경 2km 이내에 위치한 철도/지하철역 목록입니다. 도보/차량 시간은 직선거리 기준 추정값입니다.
                 </p>
 
                 {detailData.subways && detailData.subways.length > 0 ? (
@@ -989,7 +1212,7 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 bg-normal/20 border border-normal border-dashed rounded-xl text-neutral">
                     <Train size={32} className="mb-2 opacity-20 text-warn" />
-                    <p className="text-xs font-semibold text-warn">2km 이내에 지하철역이 없습니다.</p>
+                    <p className="text-xs font-semibold text-warn">2km 이내에 철도/지하철역이 없습니다.</p>
                   </div>
                 )}
               </div>
@@ -1106,7 +1329,7 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
                   {/* 좌측 Y축: 가격 */}
                   <YAxis yAxisId="left" width={52} stroke="#64748b" fontSize={11} tickLine={false} domain={[(dataMin) => Math.max(0, Math.floor(dataMin * 0.9)), "auto"]} />
                   {/* 우측 Y축: 거래량 */}
-                  <YAxis yAxisId="right" orientation="right" width={35} stroke="#64748b" fontSize={11} tickLine={false} domain={[(dataMin) => Math.max(0, Math.floor(dataMin * 0.9)), "auto"]} />
+                  <YAxis yAxisId="right" orientation="right" width={35} stroke="#64748b" fontSize={11} tickLine={false} allowDecimals={false} domain={[(dataMin) => Math.max(0, Math.floor(dataMin * 0.9)), "auto"]} />
                   <Tooltip contentStyle={tooltipContentStyle} />
                   
                   {/* 우측 Y축 기준의 거래량 Bar (뒷배경) */}
@@ -1186,7 +1409,7 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
                     {/* Y축 1: 가격 (억 원) */}
                     <YAxis yAxisId="left" width={52} stroke="#64748b" fontSize={11} tickLine={false} domain={[(dataMin) => Math.max(0, Math.floor(dataMin * 0.9)), "auto"]} />
                     {/* Y축 2: 거래 건수 (건) */}
-                    <YAxis yAxisId="right" orientation="right" width={35} stroke="#64748b" fontSize={11} tickLine={false} domain={[(dataMin) => Math.max(0, Math.floor(dataMin * 0.9)), "auto"]} />
+                    <YAxis yAxisId="right" orientation="right" width={35} stroke="#64748b" fontSize={11} tickLine={false} allowDecimals={false} domain={[(dataMin) => Math.max(0, Math.floor(dataMin * 0.9)), "auto"]} />
                     
                     <Tooltip content={<BoxPlotTooltip unit={areaUnit} type="area" />} />
 
@@ -1275,7 +1498,7 @@ export default function ComplexTab({ initialComplexName = "", lawdCode, areaUnit
                     {/* Y축 1: 가격 (억 원) */}
                     <YAxis yAxisId="left" width={52} stroke="#64748b" fontSize={11} tickLine={false} domain={[(dataMin) => Math.max(0, Math.floor(dataMin * 0.9)), "auto"]} />
                     {/* Y축 2: 거래 건수 (건) */}
-                    <YAxis yAxisId="right" orientation="right" width={35} stroke="#64748b" fontSize={11} tickLine={false} domain={[(dataMin) => Math.max(0, Math.floor(dataMin * 0.9)), "auto"]} />
+                    <YAxis yAxisId="right" orientation="right" width={35} stroke="#64748b" fontSize={11} tickLine={false} allowDecimals={false} domain={[(dataMin) => Math.max(0, Math.floor(dataMin * 0.9)), "auto"]} />
                     
                     <Tooltip content={<BoxPlotTooltip unit="m2" type="floor" />} />
 

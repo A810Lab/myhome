@@ -33,6 +33,7 @@ export default function ComplexAnalysisPage({
 }: ComplexAnalysisPageProps) {
   const [activeTab, setActiveTab] = useState<"complex" | "insight">("complex");
   const [areaUnit, setAreaUnit] = useState<"pyeong" | "m2">("pyeong");
+  const [areaType, setAreaType] = useState<"supply" | "dedicated">("supply");
 
   const [filter, setFilter] = useState<GraphFilter>({
     startDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().substring(0, 7),
@@ -143,33 +144,64 @@ export default function ComplexAnalysisPage({
           })}
         </div>
 
-        {/* 면적 단위 토글 */}
+        {/* 면적 구분(분양/전용) 및 단위 토글 */}
         {activeTab === "complex" && (
-          <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-900 shrink-0 mr-1 mb-1">
-            <button
-              type="button"
-              onClick={() => setAreaUnit("pyeong")}
-              className={classNames(
-                "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
-                areaUnit === "pyeong"
-                  ? "bg-primary-600 text-white dark:bg-primary-500"
-                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-              )}
-            >
-              평
-            </button>
-            <button
-              type="button"
-              onClick={() => setAreaUnit("m2")}
-              className={classNames(
-                "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
-                areaUnit === "m2"
-                  ? "bg-primary-600 text-white dark:bg-primary-500"
-                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
-              )}
-            >
-              ㎡
-            </button>
+          <div className="flex items-center gap-2 shrink-0 mr-1 mb-1">
+            {/* 분양 / 전용 탭 */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-900">
+              <button
+                type="button"
+                onClick={() => setAreaType("supply")}
+                className={classNames(
+                  "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
+                  areaType === "supply"
+                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                )}
+              >
+                분양
+              </button>
+              <button
+                type="button"
+                onClick={() => setAreaType("dedicated")}
+                className={classNames(
+                  "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
+                  areaType === "dedicated"
+                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                )}
+              >
+                전용
+              </button>
+            </div>
+
+            {/* 평 / ㎡ 단위 탭 */}
+            <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-900">
+              <button
+                type="button"
+                onClick={() => setAreaUnit("pyeong")}
+                className={classNames(
+                  "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
+                  areaUnit === "pyeong"
+                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                )}
+              >
+                평
+              </button>
+              <button
+                type="button"
+                onClick={() => setAreaUnit("m2")}
+                className={classNames(
+                  "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
+                  areaUnit === "m2"
+                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                )}
+              >
+                ㎡
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -180,6 +212,9 @@ export default function ComplexAnalysisPage({
             initialComplexName={filter.complexName ?? ""}
             lawdCode={filter.lawdCode}
             areaUnit={areaUnit}
+            areaType={areaType}
+            startDate={filter.startDate}
+            endDate={filter.endDate}
           />
         )}
         {activeTab === "insight" && (

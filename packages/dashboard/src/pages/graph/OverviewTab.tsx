@@ -11,6 +11,7 @@ import {
   Tooltip,
   BarChart,
   CartesianGrid,
+  Cell,
 } from "recharts";
 import { SectionCard } from "../../components/SectionCard";
 import { StatCard } from "../../components/StatCard";
@@ -22,6 +23,7 @@ interface OverviewTabProps {
   data: any[]; // searchTransactions 결과
   onSelectComplex?: (complexName: string) => void;
   areaUnit?: "pyeong" | "m2";
+  areaType?: "supply" | "dedicated";
   locale?: "ko" | "en";
 }
 
@@ -330,38 +332,71 @@ export default function OverviewTab({
   data,
   onSelectComplex,
   areaUnit = "pyeong",
+  areaType = "supply",
   locale = "ko",
 }: OverviewTabProps) {
   const { isNarrow } = useBreakpoint();
 
+  const getAreaValue = React.useCallback((d: any) => {
+    if (areaType === "supply") {
+      return d.supplyAreaM2 || (d.areaM2 / 0.78);
+    }
+    return d.areaM2 || 0;
+  }, [areaType]);
+
   const sizeCategories = React.useMemo(() => {
     if (areaUnit === "pyeong") {
-      return [
-        "20평 이하",
-        "21~25평",
-        "26~30평",
-        "31~35평",
-        "36~40평",
-        "41~45평",
-        "46~50평",
-        "50평 초과",
-      ];
+      if (areaType === "supply") {
+        return [
+          "20평 이하",
+          "21~25평",
+          "26~30평",
+          "31~35평",
+          "36~40평",
+          "41~45평",
+          "46~50평",
+          "50평 초과",
+        ];
+      } else {
+        return [
+          "15평 이하",
+          "16~20평",
+          "21~25평",
+          "26~30평",
+          "31~35평",
+          "36~40평",
+          "40평 초과",
+        ];
+      }
     } else {
-      return [
-        "66㎡ 이하",
-        "67~83㎡",
-        "84~99㎡",
-        "100~116㎡",
-        "117~132㎡",
-        "133~149㎡",
-        "150~165㎡",
-        "165㎡ 초과",
-      ];
+      if (areaType === "supply") {
+        return [
+          "66㎡ 이하",
+          "67~85㎡",
+          "86~105㎡",
+          "106~120㎡",
+          "121~135㎡",
+          "136~150㎡",
+          "151~165㎡",
+          "165㎡ 초과",
+        ];
+      } else {
+        return [
+          "66㎡ 이하",
+          "67~83㎡",
+          "84~99㎡",
+          "100~116㎡",
+          "117~132㎡",
+          "133~149㎡",
+          "150~165㎡",
+          "165㎡ 초과",
+        ];
+      }
     }
-  }, [areaUnit]);
+  }, [areaUnit, areaType]);
 
   const [sizeFilter, setSizeFilter] = React.useState<
-    "all" | "under20" | "20s" | "30s" | "over40"
+    "all" | "under20" | "20s" | "30s" | "40s" | "over50"
   >("all");
   const [selectedRegion, setSelectedRegion] = React.useState<string>("all");
 
@@ -383,25 +418,46 @@ export default function OverviewTab({
   const getSizeCategory = React.useCallback((areaM2: number) => {
     const areaPyeong = areaM2 / 3.3058;
     if (areaUnit === "pyeong") {
-      if (areaPyeong <= 20.5) return "20평 이하";
-      if (areaPyeong <= 25.5) return "21~25평";
-      if (areaPyeong <= 30.5) return "26~30평";
-      if (areaPyeong <= 35.5) return "31~35평";
-      if (areaPyeong <= 40.5) return "36~40평";
-      if (areaPyeong <= 45.5) return "41~45평";
-      if (areaPyeong <= 50.5) return "46~50평";
-      return "50평 초과";
+      if (areaType === "supply") {
+        if (areaPyeong <= 20.5) return "20평 이하";
+        if (areaPyeong <= 25.5) return "21~25평";
+        if (areaPyeong <= 30.5) return "26~30평";
+        if (areaPyeong <= 35.5) return "31~35평";
+        if (areaPyeong <= 40.5) return "36~40평";
+        if (areaPyeong <= 45.5) return "41~45평";
+        if (areaPyeong <= 50.5) return "46~50평";
+        return "50평 초과";
+      } else {
+        if (areaPyeong <= 15.5) return "15평 이하";
+        if (areaPyeong <= 20.5) return "16~20평";
+        if (areaPyeong <= 25.5) return "21~25평";
+        if (areaPyeong <= 30.5) return "26~30평";
+        if (areaPyeong <= 35.5) return "31~35평";
+        if (areaPyeong <= 40.5) return "36~40평";
+        return "40평 초과";
+      }
     } else {
-      if (areaM2 <= 66.5) return "66㎡ 이하";
-      if (areaM2 <= 83.5) return "67~83㎡";
-      if (areaM2 <= 99.5) return "84~99㎡";
-      if (areaM2 <= 116.5) return "100~116㎡";
-      if (areaM2 <= 132.5) return "117~132㎡";
-      if (areaM2 <= 149.5) return "133~149㎡";
-      if (areaM2 <= 165.5) return "150~165㎡";
-      return "165㎡ 초과";
+      if (areaType === "supply") {
+        if (areaM2 <= 66.5) return "66㎡ 이하";
+        if (areaM2 <= 85.5) return "67~85㎡";
+        if (areaM2 <= 105.5) return "86~105㎡";
+        if (areaM2 <= 120.5) return "106~120㎡";
+        if (areaM2 <= 135.5) return "121~135㎡";
+        if (areaM2 <= 150.5) return "136~150㎡";
+        if (areaM2 <= 165.5) return "151~165㎡";
+        return "165㎡ 초과";
+      } else {
+        if (areaM2 <= 66.5) return "66㎡ 이하";
+        if (areaM2 <= 83.5) return "67~83㎡";
+        if (areaM2 <= 99.5) return "84~99㎡";
+        if (areaM2 <= 116.5) return "100~116㎡";
+        if (areaM2 <= 132.5) return "117~132㎡";
+        if (areaM2 <= 149.5) return "133~149㎡";
+        if (areaM2 <= 165.5) return "150~165㎡";
+        return "165㎡ 초과";
+      }
     }
-  }, [areaUnit]);
+  }, [areaUnit, areaType]);
 
   const getFloorCategory = React.useCallback((floorStr: string | number) => {
     const floorNum = Number(floorStr);
@@ -549,14 +605,16 @@ export default function OverviewTab({
       }
       // 2. 평형 필터
       if (sizeFilter === "all") return true;
-      const area = d.areaM2 || 0;
-      if (sizeFilter === "under20") return area < 50; // 20평 미만 (50㎡ 미만)
-      if (sizeFilter === "20s") return area >= 50 && area < 80; // 20평대 (50㎡ ~ 80㎡ 미만, ex: 59㎡)
-      if (sizeFilter === "30s") return area >= 80 && area < 110; // 30평대 (80㎡ ~ 110㎡ 미만, ex: 84㎡)
-      if (sizeFilter === "over40") return area >= 110; // 40평 이상 (110㎡ 이상, ex: 114㎡)
+      const areaM2 = getAreaValue(d);
+      const areaPyeong = areaM2 / 3.305785;
+      if (sizeFilter === "under20") return areaPyeong < 20;
+      if (sizeFilter === "20s") return areaPyeong >= 20 && areaPyeong < 30;
+      if (sizeFilter === "30s") return areaPyeong >= 30 && areaPyeong < 40;
+      if (sizeFilter === "40s") return areaPyeong >= 40 && areaPyeong < 50;
+      if (sizeFilter === "over50") return areaPyeong >= 50;
       return true;
     });
-  }, [data, sizeFilter, selectedRegion]);
+  }, [data, sizeFilter, selectedRegion, getAreaValue]);
 
   // 1. 통계 데이터 가공 (전체 기준)
   const totalCount = filteredData.length;
@@ -671,28 +729,8 @@ export default function OverviewTab({
       const colKey = d.regionName ? d.regionName.split(" ").slice(-1)[0] : "기타";
       if (!activeRegions.includes(colKey)) return;
 
-      const areaVal = d.areaM2 || 0;
-      const areaPyeong = areaVal / 3.3058;
-      let rowKey: string;
-      if (areaUnit === "pyeong") {
-        if (areaPyeong <= 20.5)      rowKey = "20평 이하";
-        else if (areaPyeong <= 25.5) rowKey = "21~25평";
-        else if (areaPyeong <= 30.5) rowKey = "26~30평";
-        else if (areaPyeong <= 35.5) rowKey = "31~35평";
-        else if (areaPyeong <= 40.5) rowKey = "36~40평";
-        else if (areaPyeong <= 45.5) rowKey = "41~45평";
-        else if (areaPyeong <= 50.5) rowKey = "46~50평";
-        else                         rowKey = "50평 초과";
-      } else {
-        if (areaVal <= 66.5)       rowKey = "66㎡ 이하";
-        else if (areaVal <= 83.5)  rowKey = "67~83㎡";
-        else if (areaVal <= 99.5)  rowKey = "84~99㎡";
-        else if (areaVal <= 116.5) rowKey = "100~116㎡";
-        else if (areaVal <= 132.5) rowKey = "117~132㎡";
-        else if (areaVal <= 149.5) rowKey = "133~149㎡";
-        else if (areaVal <= 165.5) rowKey = "150~165㎡";
-        else                       rowKey = "165㎡ 초과";
-      }
+      const areaVal = getAreaValue(d);
+      const rowKey = getSizeCategory(areaVal);
 
       // 1. 일반 지역별 집계
       const key = `${rowKey}|${colKey}`;
@@ -857,6 +895,32 @@ export default function OverviewTab({
       .slice(0, 10);
   }, [filteredData, activeRegionFilter]);
 
+  // 지역별 색상 정의 (WDS / 시맨틱 디자인 토큰 활용)
+  const CHART_COLORS = React.useMemo(() => [
+    "var(--color-chart-primary)", // 파랑
+    "var(--color-chart-accent)",  // 주황/노랑
+    "var(--color-chart-min)",     // 초록
+    "var(--color-chart-median)",  // 보라
+    "var(--color-chart-floor)",   // 핑크
+    "var(--color-chart-max)",     // 빨강
+  ], []);
+
+  const uniqueRegionsInChart = React.useMemo(() => {
+    const set = new Set<string>();
+    complexChartData.forEach((d) => {
+      if (d.지역) set.add(d.지역);
+    });
+    return Array.from(set).sort();
+  }, [complexChartData]);
+
+  const regionColorMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    uniqueRegionsInChart.forEach((region, idx) => {
+      map[region] = CHART_COLORS[idx % CHART_COLORS.length];
+    });
+    return map;
+  }, [uniqueRegionsInChart, CHART_COLORS]);
+
   // 5. 평형별 Box Plot 데이터 가공
   // 5. 평형×층수 버블 차트 데이터 가공
 
@@ -879,7 +943,7 @@ export default function OverviewTab({
       const rName = d.regionName ? d.regionName.split(" ").slice(-1)[0] : "기타";
       if (!activeRegions.includes(rName)) return;
       
-      const sizeCat = getSizeCategory(d.areaM2 || 0);
+      const sizeCat = getSizeCategory(getAreaValue(d));
       const floorCat = getFloorCategory(d.floor);
       if (floorCat === "기타") return;
       
@@ -922,16 +986,17 @@ export default function OverviewTab({
 
   // 실제 평수 기준 필터 버튼 옵션
   const sizeOptions = [
-    { key: "all", label: "전체" },
+    { key: "all" as const, label: "전체" },
     {
-      key: "under20",
-      label: areaUnit === "pyeong" ? "20평 미만" : "50㎡ 미만",
+      key: "under20" as const,
+      label: areaUnit === "pyeong" ? "20평 미만" : "66㎡ 미만",
     },
-    { key: "20s", label: areaUnit === "pyeong" ? "20평대" : "50㎡ ~ 80㎡" },
-    { key: "30s", label: areaUnit === "pyeong" ? "30평대" : "80㎡ ~ 110㎡" },
+    { key: "20s" as const, label: areaUnit === "pyeong" ? "20평대" : "66㎡ ~ 99㎡" },
+    { key: "30s" as const, label: areaUnit === "pyeong" ? "30평대" : "99㎡ ~ 132㎡" },
+    { key: "40s" as const, label: areaUnit === "pyeong" ? "40평대" : "132㎡ ~ 165㎡" },
     {
-      key: "over40",
-      label: areaUnit === "pyeong" ? "40평 이상" : "110㎡ 이상",
+      key: "over50" as const,
+      label: areaUnit === "pyeong" ? "50평 초과" : "165㎡ 초과",
     },
   ] as const;
 
@@ -1334,12 +1399,13 @@ export default function OverviewTab({
                   />
                   <span>{t.legendVolume}</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setComplexSeriesVisible(prev => ({ ...prev, 평균가: !prev.평균가 }))}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all border ${
                     complexSeriesVisible.평균가
-                      ? "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400"
+                      ? "bg-violet-500/10 border-violet-500/20 text-violet-600 dark:text-violet-400"
                       : "border-transparent text-assistive line-through"
                   }`}
                 >
@@ -1347,15 +1413,29 @@ export default function OverviewTab({
                     <span
                       className="absolute w-full h-0.5"
                       style={{
-                        backgroundColor: complexSeriesVisible.평균가 ? "var(--color-chart-primary)" : "var(--color-semantic-line-normal-normal)",
+                        backgroundColor: complexSeriesVisible.평균가 ? "var(--color-chart-median)" : "var(--color-semantic-line-normal-normal)",
                       }}
                     />
                     {complexSeriesVisible.평균가 && (
-                      <span className="absolute w-1.5 h-1.5 rotate-45" style={{ backgroundColor: "var(--color-chart-primary)" }} />
+                      <span className="absolute w-1.5 h-1.5 rotate-45" style={{ backgroundColor: "var(--color-chart-median)" }} />
                     )}
                   </div>
                   <span>{t.legendAvgPrice}</span>
                 </button>
+
+                {/* 거래수가 활성화되어 있을 때만 지역별 컬러 뱃지 표시 */}
+                {complexSeriesVisible.거래수 && uniqueRegionsInChart.map((region) => (
+                  <div
+                    key={region}
+                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-900 border border-normal text-[10px] text-neutral font-semibold"
+                  >
+                    <span
+                      className="inline-block w-2 h-2 rounded-full"
+                      style={{ backgroundColor: regionColorMap[region] }}
+                    />
+                    <span>{region}</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1383,7 +1463,7 @@ export default function OverviewTab({
                     fontSize={10}
                     tickLine={false}
                     interval={0}
-                    height={60}
+                    height={100}
                     tick={(props: any) => {
                       const { x, y, payload } = props;
                       return (
@@ -1391,12 +1471,13 @@ export default function OverviewTab({
                           <text
                             x={0}
                             y={0}
-                            dy={16}
+                            dy={12}
+                            dx={-4}
                             textAnchor="end"
                             fill="var(--color-semantic-label-neutral)"
                             fontSize={isNarrow ? 9 : 10}
                             fontWeight="bold"
-                            transform="rotate(-25)"
+                            transform="rotate(-90)"
                             className="cursor-pointer hover:fill-primary transition-colors"
                             onClick={() => onSelectComplex && onSelectComplex(payload.value)}
                           >
@@ -1426,7 +1507,7 @@ export default function OverviewTab({
                     <YAxis
                       yAxisId="right"
                       orientation="right"
-                      stroke="var(--color-chart-primary)"
+                      stroke="var(--color-chart-median)"
                       fontSize={10}
                       tickLine={false}
                       width={40}
@@ -1435,7 +1516,7 @@ export default function OverviewTab({
                         angle: 90,
                         position: "insideRight",
                         offset: 5,
-                        style: { fontSize: 10, fill: "var(--color-chart-primary)", fontWeight: "bold" }
+                        style: { fontSize: 10, fill: "var(--color-chart-median)", fontWeight: "bold" }
                       }}
                     />
                   )}
@@ -1452,7 +1533,7 @@ export default function OverviewTab({
                                 <span>총 거래수:</span>
                                 <span className="font-bold">{d.거래수}건</span>
                               </p>
-                              <p className="flex justify-between gap-4 text-primary" style={{ color: "var(--color-chart-primary)" }}>
+                              <p className="flex justify-between gap-4" style={{ color: "var(--color-chart-median)" }}>
                                 <span>평균 거래가:</span>
                                 <span className="font-bold">{d.평균가}억</span>
                               </p>
@@ -1475,7 +1556,6 @@ export default function OverviewTab({
                     <Bar
                       yAxisId="left"
                       dataKey="거래수"
-                      fill="var(--color-chart-accent)"
                       radius={[4, 4, 0, 0]}
                       cursor="pointer"
                       onClick={(data: any) => {
@@ -1483,14 +1563,24 @@ export default function OverviewTab({
                           onSelectComplex(data.name);
                         }
                       }}
-                    />
+                    >
+                      {complexChartData.map((entry, index) => {
+                        const color = regionColorMap[entry.지역] || "var(--color-chart-accent)";
+                        return (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={color}
+                          />
+                        );
+                      })}
+                    </Bar>
                   )}
                   {complexSeriesVisible.평균가 && (
                     <Line
                       yAxisId="right"
                       type="monotone"
                       dataKey="평균가"
-                      stroke="var(--color-chart-primary)"
+                      stroke="var(--color-chart-median)"
                       strokeWidth={2}
                       activeDot={{ r: 6 }}
                       dot={{ cursor: "pointer", r: 4 }}

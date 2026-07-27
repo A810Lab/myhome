@@ -302,6 +302,8 @@ export const copy = {
     runGeocodeBatchBtn: "좌표 미확보 단지 일괄 수집",
     batchGeocodeCompleted: "Geocoding 수집 배치 완료",
     batchGeocodeCountInfo: "대상: {total}건 / 성공: {success}건 / 실패: {failed}건",
+    dbAggregateTab: "사전 집계 기반",
+    liveSearchTab: "실시간 조회 기반",
     allComplexAlertRegister: "전체 단지 알림 등록",
     alertRegisterTip: "반경 내 모든 단지를 관심 조건 알림 규칙으로 등록합니다.",
     complexAnalysisLink: "단지 분석으로 이동",
@@ -372,7 +374,19 @@ export const copy = {
     infraCategoryHospital: "병원",
     infraCategoryMart: "대형마트",
     infraCategoryPharmacy: "약국",
-    infraCategoryConvStore: "편의점"
+    infraCategoryConvStore: "편의점",
+    infraDetailGeneralHospital: "종합/대학병원",
+    infraDetailLocalClinic: "일반 병/의원",
+    infraDetailLargeMart: "대형마트",
+    infraDetailSSM: "대형슈퍼(SSM)",
+    infraDetailElementary: "초등학교",
+    infraDetailMiddle: "중학교",
+    infraDetailHigh: "고등학교",
+    infraDetailMetro: "지하철(일반)",
+    infraDetailGtx: "GTX",
+    infraDetailRail: "광역/고속철도(기차)",
+    infraDetailPharmacy: "약국",
+    infraDetailConvStore: "편의점"
   },
   en: {
     // Navigation / Breadcrumb Parents
@@ -672,6 +686,8 @@ export const copy = {
     runGeocodeBatchBtn: "Batch Collect Coordinates for Pending Complexes",
     batchGeocodeCompleted: "Geocoding Batch Collection Completed",
     batchGeocodeCountInfo: "Target: {total} / Success: {success} / Failed: {failed}",
+    dbAggregateTab: "Pre-aggregated",
+    liveSearchTab: "Real-time query",
     allComplexAlertRegister: "Register Alerts for All Complexes",
     alertRegisterTip: "Registers all complexes within the radius as interest notification rules.",
     complexAnalysisLink: "Go to Complex Analysis",
@@ -742,7 +758,19 @@ export const copy = {
     infraCategoryHospital: "Hospital",
     infraCategoryMart: "Mart",
     infraCategoryPharmacy: "Pharmacy",
-    infraCategoryConvStore: "Conv. Store"
+    infraCategoryConvStore: "Conv. Store",
+    infraDetailGeneralHospital: "General/Univ. Hospital",
+    infraDetailLocalClinic: "Local Clinic",
+    infraDetailLargeMart: "Large Mart",
+    infraDetailSSM: "SSM Supermarket",
+    infraDetailElementary: "Elementary School",
+    infraDetailMiddle: "Middle School",
+    infraDetailHigh: "High School",
+    infraDetailMetro: "Subway (Metro)",
+    infraDetailGtx: "GTX",
+    infraDetailRail: "Rail/Train",
+    infraDetailPharmacy: "Pharmacy",
+    infraDetailConvStore: "Convenience Store"
   }
 } as const;
 

@@ -178,6 +178,17 @@ export function initDb(): void {
 
     CREATE INDEX IF NOT EXISTS idx_user_activity_logs_created_at ON user_activity_logs(created_at);
     CREATE INDEX IF NOT EXISTS idx_user_activity_logs_user_email ON user_activity_logs(user_email);
+
+    CREATE TABLE IF NOT EXISTS complex_area_mappings (
+      complex_id TEXT NOT NULL,
+      area_m2 REAL NOT NULL,
+      supply_area_m2 REAL NOT NULL,
+      source TEXT DEFAULT 'api',
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (complex_id, area_m2),
+      FOREIGN KEY (complex_id) REFERENCES complexes(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_complex_area_mappings_complex_id ON complex_area_mappings(complex_id);
   `);
 
   // -- complexes 테이블 주소·좌표 컬럼 마이그레이션 (기존 DB 호환)
@@ -191,6 +202,10 @@ export function initDb(): void {
   if (!colNames.has('geocoded_at')) db.exec('ALTER TABLE complexes ADD COLUMN geocoded_at TEXT');
   if (!colNames.has('geocode_failed')) db.exec('ALTER TABLE complexes ADD COLUMN geocode_failed INTEGER DEFAULT 0');
   if (!colNames.has('geocode_error')) db.exec('ALTER TABLE complexes ADD COLUMN geocode_error TEXT');
+  if (!colNames.has('total_households')) db.exec('ALTER TABLE complexes ADD COLUMN total_households INTEGER');
+  if (!colNames.has('total_parking')) db.exec('ALTER TABLE complexes ADD COLUMN total_parking REAL');
+  if (!colNames.has('parking_per_household')) db.exec('ALTER TABLE complexes ADD COLUMN parking_per_household REAL');
+  if (!colNames.has('use_approval_date')) db.exec('ALTER TABLE complexes ADD COLUMN use_approval_date TEXT');
 
   // 좌표 보유 단지 조회 성능 인덱스
   db.exec('CREATE INDEX IF NOT EXISTS idx_complexes_geocoded ON complexes(lat, lng) WHERE lat IS NOT NULL');
@@ -336,6 +351,28 @@ export async function upsertTransactionBatch(
 }
 
 /**
+ * 전용면적 대비 분양면적 매핑 정보 Upsert
+ */
+export function upsertAreaMapping(
+  complexId: string,
+  areaM2: number,
+  supplyAreaM2: number,
+  source: string = "api"
+): void {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const stmt = db.prepare(`
+    INSERT INTO complex_area_mappings (complex_id, area_m2, supply_area_m2, source, created_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(complex_id, area_m2) DO UPDATE SET
+      supply_area_m2 = excluded.supply_area_m2,
+      source = excluded.source,
+      created_at = excluded.created_at
+  `);
+  stmt.run(complexId, areaM2, supplyAreaM2, source, now);
+}
+
+/**
  * 검색 단지명 유연 해석
  */
 function resolveComplexName(db: DatabaseSync, complexName: string, lawdCode?: string): string {
@@ -378,7 +415,9 @@ function resolveComplexName(db: DatabaseSync, complexName: string, lawdCode?: st
 export async function getComplexTrend(
   complexName: string,
   lawdCode?: string,
-  area?: number
+  area?: number,
+  startDate?: string,
+  endDate?: string
 ): Promise<any[]> {
   const db = getDb();
   const resolvedName = resolveComplexName(db, complexName, lawdCode);
@@ -387,9 +426,11 @@ export async function getComplexTrend(
   let sql = `
     SELECT substr(t.deal_date, 1, 7) AS month,
            t.price_eok               AS priceEok,
-           CAST(ROUND(t.area_m2) AS TEXT) || '㎡' AS area
+           t.area_m2                 AS areaM2,
+           m.supply_area_m2          AS supplyAreaM2
     FROM transactions t
     JOIN complexes c ON t.complex_id = c.id
+    LEFT JOIN complex_area_mappings m ON t.complex_id = m.complex_id AND ROUND(t.area_m2, 2) = ROUND(m.area_m2, 2)
     WHERE c.name = ?
   `;
   const params: any[] = [resolvedName];
@@ -401,9 +442,17 @@ export async function getComplexTrend(
     sql += " AND CAST(ROUND(t.area_m2) AS INTEGER) = ?";
     params.push(area);
   }
+  if (startDate) {
+    sql += " AND substr(t.deal_date, 1, 7) >= ?";
+    params.push(startDate);
+  }
+  if (endDate) {
+    sql += " AND substr(t.deal_date, 1, 7) <= ?";
+    params.push(endDate);
+  }
   sql += " ORDER BY month ASC";
 
-  const rows = db.prepare(sql).all(...params) as { month: string; priceEok: number; area: string }[];
+  const rows = db.prepare(sql).all(...params) as { month: string; priceEok: number; areaM2: number; supplyAreaM2: number | null }[];
 
   // 월별 가격 그룹화
   const monthlyGroups = new Map<string, { prices: number[]; sizePrices: Map<string, number[]> }>();
@@ -415,12 +464,25 @@ export async function getComplexTrend(
     }
     group.prices.push(row.priceEok);
 
-    let sPrices = group.sizePrices.get(row.area);
-    if (!sPrices) {
-      sPrices = [];
-      group.sizePrices.set(row.area, sPrices);
+    const dedicatedLabel = `${Math.round(row.areaM2)}㎡`;
+    const supplyM2 = row.supplyAreaM2 || (row.areaM2 / 0.78);
+    const supplyLabel = `${Math.round(supplyM2)}㎡(공급)`;
+
+    // 전용면적 그룹
+    let dedPrices = group.sizePrices.get(dedicatedLabel);
+    if (!dedPrices) {
+      dedPrices = [];
+      group.sizePrices.set(dedicatedLabel, dedPrices);
     }
-    sPrices.push(row.priceEok);
+    dedPrices.push(row.priceEok);
+
+    // 공급면적 그룹
+    let supPrices = group.sizePrices.get(supplyLabel);
+    if (!supPrices) {
+      supPrices = [];
+      group.sizePrices.set(supplyLabel, supPrices);
+    }
+    supPrices.push(row.priceEok);
   }
 
   // 중위값 계산 헬퍼 함수
@@ -512,10 +574,12 @@ export async function searchTransactions(filter: GraphFilter): Promise<any[]> {
   
   let queryStr = `
     SELECT r.display_name AS regionName, r.lawd_code AS lawdCode, c.name AS apartmentName,
-           t.deal_date AS dealDate, t.price_eok AS priceEok, t.area_m2 AS areaM2, t.floor AS floor, t.dedupe_key AS dedupeKey
+           t.deal_date AS dealDate, t.price_eok AS priceEok, t.area_m2 AS areaM2,
+           m.supply_area_m2 AS supplyAreaM2, t.floor AS floor, t.dedupe_key AS dedupeKey
     FROM transactions t
     JOIN complexes c ON t.complex_id = c.id
     JOIN regions r ON c.lawd_code = r.lawd_code
+    LEFT JOIN complex_area_mappings m ON t.complex_id = m.complex_id AND ROUND(t.area_m2, 2) = ROUND(m.area_m2, 2)
     WHERE 1=1
   `;
   const params: any[] = [];
@@ -559,6 +623,7 @@ export async function searchTransactions(filter: GraphFilter): Promise<any[]> {
     dealDate: r.dealDate,
     priceEok: r.priceEok,
     areaM2: r.areaM2,
+    supplyAreaM2: r.supplyAreaM2,
     floor: r.floor,
     dedupeKey: r.dedupeKey,
   }));
@@ -668,11 +733,13 @@ export async function getGraphTopology(filter: GraphFilter): Promise<GraphTopolo
 export async function getComplexDetail(
   complexName: string,
   lawdCode?: string,
-  area?: number
+  area?: number,
+  startDate?: string,
+  endDate?: string
 ): Promise<any> {
   const db = getDb();
   const resolvedName = resolveComplexName(db, complexName, lawdCode);
-  const trend = await getComplexTrend(resolvedName, lawdCode, area);
+  const trend = await getComplexTrend(resolvedName, lawdCode, area, startDate, endDate);
 
   // 1. 전체 매칭 거래 가져오기 (메모리에서 통계 연산 수행용)
   let baseSql = `
@@ -691,6 +758,14 @@ export async function getComplexDetail(
   if (area !== undefined && area !== null) {
     baseSql += " AND CAST(ROUND(t.area_m2) AS INTEGER) = ?";
     baseParams.push(area);
+  }
+  if (startDate) {
+    baseSql += " AND substr(t.deal_date, 1, 7) >= ?";
+    baseParams.push(startDate);
+  }
+  if (endDate) {
+    baseSql += " AND substr(t.deal_date, 1, 7) <= ?";
+    baseParams.push(endDate);
   }
 
   const allTxs = db.prepare(baseSql).all(...baseParams) as { area: string; floor: number | null; priceEok: number }[];
@@ -803,6 +878,14 @@ export async function getComplexDetail(
   if (area !== undefined && area !== null) {
     recentSql += " AND CAST(ROUND(t.area_m2) AS INTEGER) = ?";
     recentParams.push(area);
+  }
+  if (startDate) {
+    recentSql += " AND substr(t.deal_date, 1, 7) >= ?";
+    recentParams.push(startDate);
+  }
+  if (endDate) {
+    recentSql += " AND substr(t.deal_date, 1, 7) <= ?";
+    recentParams.push(endDate);
   }
   recentSql += " ORDER BY t.deal_date DESC LIMIT 10";
 
@@ -1637,18 +1720,34 @@ export async function deletePresetCore(id: string, email: string, type: 'overvie
 }
 
 /**
- * 단지 지리 정보 조회 (위경도, 법정동, 지번 등)
+ * 단지 지리 정보 및 상세 메타 정보 조회 (위경도, 법정동, 지번, 세대수, 주차대수, 사용승인일 등)
  */
 export function getComplexGeo(
   complexName: string,
   lawdCode?: string
-): { id: string; name: string; lawdCode: string; regionName: string; lat: number | null; lng: number | null; dongName: string | null; jibun: string | null; roadName: string | null } | null {
+): {
+  id: string;
+  name: string;
+  lawdCode: string;
+  regionName: string;
+  lat: number | null;
+  lng: number | null;
+  dongName: string | null;
+  jibun: string | null;
+  roadName: string | null;
+  totalHouseholds?: number | null;
+  totalParking?: number | null;
+  parkingPerHousehold?: number | null;
+  useApprovalDate?: string | null;
+} | null {
   const db = getDb();
   const resolvedName = resolveComplexName(db, complexName, lawdCode);
 
   let query = `
     SELECT c.id, c.name, c.lawd_code AS lawdCode, r.display_name AS regionName,
-           c.lat, c.lng, c.dong_name AS dongName, c.jibun, c.road_name AS roadName
+           c.lat, c.lng, c.dong_name AS dongName, c.jibun, c.road_name AS roadName,
+           c.total_households AS totalHouseholds, c.total_parking AS totalParking,
+           c.parking_per_household AS parkingPerHousehold, c.use_approval_date AS useApprovalDate
     FROM complexes c
     JOIN regions r ON c.lawd_code = r.lawd_code
     WHERE c.name = ?
@@ -1663,6 +1762,43 @@ export function getComplexGeo(
   const row = db.prepare(query).get(...params);
   if (!row) return null;
   return row as any;
+}
+
+/**
+ * 단지 메타 정보(세대수, 주차대수, 사용승인일) 업데이트
+ */
+export function updateComplexMeta(
+  complexId: string,
+  meta: {
+    totalHouseholds?: number | null;
+    totalParking?: number | null;
+    parkingPerHousehold?: number | null;
+    useApprovalDate?: string | null;
+  }
+): void {
+  const db = getDb();
+  db.exec("BEGIN TRANSACTION");
+  try {
+    const stmt = db.prepare(`
+      UPDATE complexes
+      SET total_households = COALESCE(?, total_households),
+          total_parking = COALESCE(?, total_parking),
+          parking_per_household = COALESCE(?, parking_per_household),
+          use_approval_date = COALESCE(?, use_approval_date)
+      WHERE id = ?
+    `);
+    stmt.run(
+      meta.totalHouseholds ?? null,
+      meta.totalParking ?? null,
+      meta.parkingPerHousehold ?? null,
+      meta.useApprovalDate ?? null,
+      complexId
+    );
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
 }
 
 

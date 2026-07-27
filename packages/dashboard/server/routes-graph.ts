@@ -309,15 +309,17 @@ export function createGraphRouter(): Router {
       const complexName = decodeURIComponent(req.params.name);
       const lawdCode = req.query.lawdCode as string | undefined;
       const area = req.query.area ? Number(req.query.area) : undefined;
+      const startDate = req.query.startDate as string | undefined;
+      const endDate = req.query.endDate as string | undefined;
 
-      const cacheKey = `detail:${complexName}:${lawdCode ?? ""}:${area ?? ""}`;
+      const cacheKey = `detail:${complexName}:${lawdCode ?? ""}:${area ?? ""}:${startDate ?? ""}:${endDate ?? ""}`;
       const cached = graphCache.get(cacheKey);
       if (cached) {
         res.json(cached);
         return;
       }
 
-      const data = await getComplexDetail(complexName, lawdCode, area);
+      const data = await getComplexDetail(complexName, lawdCode, area, startDate, endDate);
 
       // 단지 지리정보 조회 및 지하철역 연동
       let complexInfo = getComplexGeo(complexName, lawdCode);
