@@ -165,7 +165,7 @@ export function CollectPage() {
         )}
         
         {/* 일자별 / 등록월별 토글 세그먼트 컨트롤 */}
-        <div className="flex bg-alternative p-1 rounded-xl w-fit border border-normal shadow-sm">
+        <div className="flex bg-alternative p-1 rounded-xl w-fit shadow-sm">
           <button
             onClick={() => {
               setViewType("daily");
