@@ -80,6 +80,7 @@ export function DatabaseAdminPage() {
     success: number;
     failed: number;
     failures: { name: string; query: string; reason: string }[];
+    isPaused?: boolean;
   } | null>(null);
   const [shouldStopBatch, setShouldStopBatch] = useState(false);
   const shouldStopRef = useRef(false);
@@ -122,7 +123,7 @@ export function DatabaseAdminPage() {
       return;
     }
 
-    const totalToProcess = Math.min(currentPending, 30); // 한 번에 최대 30개 수집
+    const totalToProcess = currentPending; // 모든 대기 항목 처리
     setBatchLoading(true);
     shouldStopRef.current = false;
     setShouldStopBatch(false);
@@ -133,7 +134,8 @@ export function DatabaseAdminPage() {
       total: totalToProcess,
       success: 0,
       failed: 0,
-      failures: [] as { name: string; query: string; reason: string }[]
+      failures: [] as { name: string; query: string; reason: string }[],
+      isPaused: false
     };
     setBatchProgress(progressState);
 
@@ -175,7 +177,11 @@ export function DatabaseAdminPage() {
         setBatchProgress({ ...progressState });
       }
 
-      if (totalToProcess > 1 && i < totalToProcess - 1) {
+      if ((i + 1) % 30 === 0 && i < totalToProcess - 1) {
+        setBatchProgress(prev => prev ? { ...prev, isPaused: true } : null);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        setBatchProgress(prev => prev ? { ...prev, isPaused: false } : null);
+      } else if (totalToProcess > 1 && i < totalToProcess - 1) {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
@@ -783,7 +789,11 @@ export function DatabaseAdminPage() {
                     <div className="flex gap-2">
                       <div className="flex-1 py-2.5 rounded-xl bg-emerald-600/20 text-emerald-600 font-bold flex items-center justify-center gap-2 border border-emerald-500/20 text-sm">
                         <RefreshCw size={15} className="animate-spin text-emerald-600 shrink-0" />
-                        <span>수집 중 ({batchProgress?.processed} / {batchProgress?.total})</span>
+                        <span>
+                          {batchProgress?.isPaused 
+                            ? (t.geocodeBatchPausing || "수집 대기 중 (API 제한 방지)...") 
+                            : `${t.geocodeCollecting || "수집 중"} (${batchProgress?.processed} / ${batchProgress?.total})`}
+                        </span>
                       </div>
                       <button
                         type="button"
