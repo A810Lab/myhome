@@ -211,6 +211,16 @@ export const copy = {
     floorHigh: "고층 (16~25층)",
     floorSuper: "초고층 (26층 이상)",
     allRegions: "전체 지역",
+    complexActiveRankTitle: "거래가 활발한 아파트 단지 (상위 10개)",
+    complexClickHint: "* 단지명(X축) 또는 그래프를 클릭하면 상세 실거래 추이를 조회할 수 있습니다.",
+    showLegend: "범례 표시",
+    hideLegend: "범례 숨기기",
+    legendVolume: "거래 건수 (Bar)",
+    legendAvgPrice: "평균 거래금액 (Line)",
+    noActiveComplexData: "해당 지역에 활성화된 거래 정보가 없습니다.",
+    noActiveChartData: "표시할 데이터가 없습니다. 범례에서 그래프를 활성화해주세요.",
+    axisVolume: "거래수 (건)",
+    axisAvgPrice: "평균가 (억)",
 
     // Collect Stats
     collectReportTitle: "수집 일단위 리포트",
@@ -569,6 +579,16 @@ export const copy = {
     floorHigh: "High (16~25F)",
     floorSuper: "Super High (26F+)",
     allRegions: "All Regions",
+    complexActiveRankTitle: "Top 10 Most Active Apartment Complexes",
+    complexClickHint: "* Click the complex name (X-axis) or graph to view detailed transaction trends.",
+    showLegend: "Show Legend",
+    hideLegend: "Hide Legend",
+    legendVolume: "Transaction Volume (Bar)",
+    legendAvgPrice: "Average Price (Line)",
+    noActiveComplexData: "No active transaction data in this region.",
+    noActiveChartData: "No data to display. Please enable series in the legend.",
+    axisVolume: "Volume (Count)",
+    axisAvgPrice: "Avg Price (Eok)",
 
     // Collect Stats
     collectReportTitle: "Daily Collection Report",

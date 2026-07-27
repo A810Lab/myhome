@@ -10,6 +10,7 @@ import {
   YAxis,
   Tooltip,
   BarChart,
+  CartesianGrid,
 } from "recharts";
 import { SectionCard } from "../../components/SectionCard";
 import { StatCard } from "../../components/StatCard";
@@ -470,6 +471,16 @@ export default function OverviewTab({
   type BoxVisible = { volume: boolean; whisker: boolean; box: boolean; median: boolean; avg: boolean };
   const defaultVisible: BoxVisible = { volume: true, whisker: false, box: true, median: false, avg: true };
   const [monthlyVisible, setMonthlyVisible] = React.useState<BoxVisible>(defaultVisible);
+
+  // 거래가 활발한 아파트 단지 범례 및 시리즈 On/Off 상태
+  const [showComplexLegend, setShowComplexLegend] = React.useState<boolean>(true);
+  const [complexSeriesVisible, setComplexSeriesVisible] = React.useState<{
+    거래수: boolean;
+    평균가: boolean;
+  }>({
+    거래수: true,
+    평균가: true,
+  });
 
   const makeToggle = (setter: React.Dispatch<React.SetStateAction<BoxVisible>>) =>
     (key: keyof BoxVisible) => setter(prev => ({ ...prev, [key]: !prev[key] }));
@@ -1255,7 +1266,7 @@ export default function OverviewTab({
 
       {/* 거래 상위 10개 단지 (단독 1단 넓은 카드로 재배치 및 입체화) */}
       <SectionCard
-        title="거래가 활발한 아파트 단지 (상위 10개)"
+        title={t.complexActiveRankTitle}
         right={
           <div className="flex flex-wrap gap-1 max-w-[240px] md:max-w-none justify-end">
             <button
@@ -1268,7 +1279,7 @@ export default function OverviewTab({
                   : "bg-alternative text-neutral hover:text-strong border border-normal"
               }`}
             >
-              전체
+              {t.allResults}
             </button>
             {activeRegions.map((region) => (
               <button
@@ -1287,100 +1298,147 @@ export default function OverviewTab({
           </div>
         }
       >
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-2">
-          {/* 좌측: 세련된 랭킹 리스트 뷰 */}
-          <div className="md:col-span-5 flex flex-col justify-between">
-            <div className="mb-2">
-              <span className="text-[10px] font-bold text-assistive block mb-2">
-                * 단지를 클릭하면 상세 실거래 추이를 조회할 수 있습니다.
+        <div className="mt-2">
+          {/* 차트 컨트롤 및 팁 영역 */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 select-none">
+            <div className="flex flex-col md:flex-row md:items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowComplexLegend(!showComplexLegend)}
+                className="w-fit px-2.5 py-1 rounded-lg border border-normal bg-alternative hover:bg-elevated text-[10px] font-bold text-neutral transition-all"
+              >
+                {showComplexLegend ? t.hideLegend : t.showLegend}
+              </button>
+              <span className="text-[10px] font-bold text-assistive">
+                {t.complexClickHint}
               </span>
             </div>
-            <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1 scrollbar-thin">
-              {complexChartData.map((item, idx) => {
-                const rank = idx + 1;
-                const badgeClass = rank === 1
-                  ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
-                  : rank === 2
-                  ? "bg-slate-400/10 text-slate-400 border-slate-400/20"
-                  : rank === 3
-                  ? "bg-amber-600/10 text-amber-600 border-amber-600/20"
-                  : "bg-alternative text-assistive border-normal";
 
-                return (
-                  <div
-                    key={item.name}
-                    className="flex items-center justify-between p-2.5 rounded-xl border border-normal bg-elevated/40 hover:bg-alternative/30 hover:border-primary transition-all cursor-pointer group"
-                    onClick={() => onSelectComplex && onSelectComplex(item.name)}
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className={`w-5 h-5 flex items-center justify-center rounded-lg border text-[10px] font-black shrink-0 ${badgeClass}`}>
-                        {rank}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-[11px] md:text-[12px] font-bold text-strong truncate group-hover:text-primary transition-colors">
-                          {item.name}
-                        </p>
-                        <p className="text-[9px] text-assistive font-medium">
-                          {item.지역}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[9px] md:text-[10px] font-medium text-neutral bg-alternative/60 px-2 py-0.5 rounded-full">
-                        {item.거래수}건
-                      </span>
-                      <span className="text-[10px] md:text-[11px] font-black text-primary">
-                        {item.평균가}억
-                      </span>
-                    </div>
+            {/* 범례 아이템 - showComplexLegend가 true일 때만 표시 */}
+            {showComplexLegend && (
+              <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setComplexSeriesVisible(prev => ({ ...prev, 거래수: !prev.거래수 }))}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all border ${
+                    complexSeriesVisible.거래수
+                      ? "bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400"
+                      : "border-transparent text-assistive line-through"
+                  }`}
+                >
+                  <span
+                    className="inline-block w-2.5 h-2.5 rounded-sm"
+                    style={{
+                      backgroundColor: complexSeriesVisible.거래수 ? "var(--color-chart-accent)" : "var(--color-semantic-line-normal-normal)",
+                    }}
+                  />
+                  <span>{t.legendVolume}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setComplexSeriesVisible(prev => ({ ...prev, 평균가: !prev.평균가 }))}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all border ${
+                    complexSeriesVisible.평균가
+                      ? "bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400"
+                      : "border-transparent text-assistive line-through"
+                  }`}
+                >
+                  <div className="relative flex items-center justify-center w-4 h-2.5">
+                    <span
+                      className="absolute w-full h-0.5"
+                      style={{
+                        backgroundColor: complexSeriesVisible.평균가 ? "var(--color-chart-primary)" : "var(--color-semantic-line-normal-normal)",
+                      }}
+                    />
+                    {complexSeriesVisible.평균가 && (
+                      <span className="absolute w-1.5 h-1.5 rotate-45" style={{ backgroundColor: "var(--color-chart-primary)" }} />
+                    )}
                   </div>
-                );
-              })}
-              {complexChartData.length === 0 && (
-                <div className="text-center py-10 text-assistive text-xs">
-                  해당 지역에 활성화된 거래 정보가 없습니다.
-                </div>
-              )}
-            </div>
+                  <span>{t.legendAvgPrice}</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* 우측: 차트 뷰 */}
-          <div className="md:col-span-7 flex flex-col justify-end">
-            <div className="flex items-center gap-4 mb-3 justify-end text-[10px] text-neutral">
-              <div className="flex items-center gap-1">
-                <span
-                  className="inline-block w-2 h-2 rounded-full"
-                  style={{ backgroundColor: "var(--color-chart-accent)" }}
-                />
-                <span>거래수 (단위: 건)</span>
+          {/* 차트 뷰 */}
+          <div className="h-[360px] w-full mt-2 relative">
+            {complexChartData.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center text-assistive text-xs">
+                {t.noActiveComplexData}
               </div>
-            </div>
-            <div className="h-[320px] w-full">
+            ) : !complexSeriesVisible.거래수 && !complexSeriesVisible.평균가 ? (
+              <div className="absolute inset-0 flex items-center justify-center text-assistive text-xs">
+                {t.noActiveChartData}
+              </div>
+            ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
+                <ComposedChart
                   data={complexChartData}
-                  layout="vertical"
-                  margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+                  margin={{ top: 15, right: 15, left: 15, bottom: 25 }}
                 >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis
-                    type="number"
-                    stroke="#64748b"
-                    fontSize={11}
-                    tickLine={false}
-                    interval="preserveStartEnd"
-                    domain={[
-                      (dataMin) => Math.max(0, Math.floor(dataMin * 0.9)),
-                      "auto",
-                    ]}
-                  />
-                  <YAxis
                     dataKey="name"
-                    type="category"
                     stroke="#64748b"
                     fontSize={10}
                     tickLine={false}
-                    width={90}
+                    interval={0}
+                    height={60}
+                    tick={(props: any) => {
+                      const { x, y, payload } = props;
+                      return (
+                        <g transform={`translate(${x},${y})`}>
+                          <text
+                            x={0}
+                            y={0}
+                            dy={16}
+                            textAnchor="end"
+                            fill="var(--color-semantic-label-neutral)"
+                            fontSize={isNarrow ? 9 : 10}
+                            fontWeight="bold"
+                            transform="rotate(-25)"
+                            className="cursor-pointer hover:fill-primary transition-colors"
+                            onClick={() => onSelectComplex && onSelectComplex(payload.value)}
+                          >
+                            {payload.value}
+                          </text>
+                        </g>
+                      );
+                    }}
                   />
+                  {complexSeriesVisible.거래수 && (
+                    <YAxis
+                      yAxisId="left"
+                      stroke="var(--color-chart-accent)"
+                      fontSize={10}
+                      tickLine={false}
+                      width={40}
+                      label={{
+                        value: t.axisVolume,
+                        angle: -90,
+                        position: "insideLeft",
+                        offset: 5,
+                        style: { fontSize: 10, fill: "var(--color-chart-accent)", fontWeight: "bold" }
+                      }}
+                    />
+                  )}
+                  {complexSeriesVisible.평균가 && (
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      stroke="var(--color-chart-primary)"
+                      fontSize={10}
+                      tickLine={false}
+                      width={40}
+                      label={{
+                        value: t.axisAvgPrice,
+                        angle: 90,
+                        position: "insideRight",
+                        offset: 5,
+                        style: { fontSize: 10, fill: "var(--color-chart-primary)", fontWeight: "bold" }
+                      }}
+                    />
+                  )}
                   <Tooltip
                     content={({ active, payload }: any) => {
                       if (active && payload && payload.length) {
@@ -1394,7 +1452,7 @@ export default function OverviewTab({
                                 <span>총 거래수:</span>
                                 <span className="font-bold">{d.거래수}건</span>
                               </p>
-                              <p className="flex justify-between gap-4 text-primary" style={{ color: "var(--color-chart-accent)" }}>
+                              <p className="flex justify-between gap-4 text-primary" style={{ color: "var(--color-chart-primary)" }}>
                                 <span>평균 거래가:</span>
                                 <span className="font-bold">{d.평균가}억</span>
                               </p>
@@ -1413,20 +1471,40 @@ export default function OverviewTab({
                       return null;
                     }}
                   />
-                  <Bar
-                    dataKey="거래수"
-                    fill="var(--color-chart-accent)"
-                    radius={[0, 4, 4, 0]}
-                    cursor="pointer"
-                    onClick={(data) => {
-                      if (data && data.name && onSelectComplex) {
-                        onSelectComplex(data.name);
-                      }
-                    }}
-                  />
-                </BarChart>
+                  {complexSeriesVisible.거래수 && (
+                    <Bar
+                      yAxisId="left"
+                      dataKey="거래수"
+                      fill="var(--color-chart-accent)"
+                      radius={[4, 4, 0, 0]}
+                      cursor="pointer"
+                      onClick={(data: any) => {
+                        if (data && data.name && onSelectComplex) {
+                          onSelectComplex(data.name);
+                        }
+                      }}
+                    />
+                  )}
+                  {complexSeriesVisible.평균가 && (
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="평균가"
+                      stroke="var(--color-chart-primary)"
+                      strokeWidth={2}
+                      activeDot={{ r: 6 }}
+                      dot={{ cursor: "pointer", r: 4 }}
+                      onClick={(data: any) => {
+                        const name = data?.name || data?.activeLabel || data?.payload?.name;
+                        if (name && onSelectComplex) {
+                          onSelectComplex(name);
+                        }
+                      }}
+                    />
+                  )}
+                </ComposedChart>
               </ResponsiveContainer>
-            </div>
+            )}
           </div>
         </div>
       </SectionCard>
