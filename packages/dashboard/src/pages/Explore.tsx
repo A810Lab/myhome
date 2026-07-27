@@ -251,17 +251,27 @@ export function ExplorePage() {
 
     (async () => {
       try {
+        // 1. DB에 저장된 단지 목록 조회
         const dbFound = await searchComplexNames("", selectedLawdCode);
         if (cancelled) return;
-        if (dbFound.length > 0) {
-          setApartments(dbFound.map((item) => item.name));
-          setSearchingComplexes(false);
-          return;
+
+        // 2. API(캐시 또는 실시간)를 통해 아파트 단지 목록 조회
+        let apiApartments: string[] = [];
+        try {
+          const apiResult = await getApartments(selectedLawdCode);
+          apiApartments = apiResult?.apartments || [];
+        } catch (apiErr) {
+          console.warn("[ExploreDetail] API 단지 목록 로드 실패 (무시하고 DB 목록만 사용):", apiErr);
         }
-        const apiResult = await getApartments(selectedLawdCode);
-        if (!cancelled) {
-          setApartments(apiResult.apartments);
-        }
+
+        if (cancelled) return;
+
+        // 3. DB 단지 목록과 API 단지 목록 병합 및 정렬 (중복 제거)
+        const dbNames = dbFound.map((item) => item.name);
+        const mergedSet = new Set<string>([...dbNames, ...apiApartments]);
+        const sortedApartments = Array.from(mergedSet).sort((a, b) => a.localeCompare(b, "ko"));
+
+        setApartments(sortedApartments);
       } catch (err) {
         console.error("[ExploreDetail] 단지 목록 로드 실패:", err);
         if (!cancelled) setApartments([]);
