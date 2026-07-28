@@ -39,7 +39,10 @@ myhome/                            ← 모노레포 루트
 │   ├── 04_DATABASE.md             ← SQLite DB 스키마 & 집계 SQL 쿼리
 │   ├── 05_DESIGN.md               ← 프론트엔드 UI, Recharts 차트, 반응형/i18n
 │   ├── 06_ROADMAP.md              ← 개발 진행 현황 & Phase별 로드맵
-│   └── 07_REGION_SEARCH.md        ← 지역 검색 및 주소 자동완성 기능
+│   ├── 07_REGION_SEARCH.md        ← 지역 검색 및 주소 자동완성 기능
+│   ├── 08_RONE_API.md             ← 부동산원 OpenAPI 명세 및 호출 가이드
+│   ├── 08-1_RONE_API_LIST.md      ← 부동산원 통계표 코드 목록
+│   └── 08-2_RONE_API_REGION_CODE.md ← 부동산원 지역코드 마스터 목록
 │
 ├── packages/
 │   ├── shared/                    ← @myhome/shared 공통 모듈
@@ -109,6 +112,12 @@ myhome/                            ← 모노레포 루트
 | 백엔드 스케줄러 및 자동 수집 제어 | `packages/dashboard/server/scheduler.ts` |
 | 대시보드 분석 API 및 라우팅 | `packages/dashboard/server/routes-graph.ts` |
 | 대시보드 분석 UI/UX 수정 | `packages/dashboard/src/pages/GraphDashboard.tsx` |
+| 부동산원 API 명세 및 호출 가이드 | `docs/08_RONE_API.md` |
+| 부동산원 통계표 코드 목록 | `docs/08-1_RONE_API_LIST.md` |
+| 부동산원 지역코드 마스터 목록 | `docs/08-2_RONE_API_REGION_CODE.md` |
+
+
+
 
 ---
 

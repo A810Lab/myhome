@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { UserCheck, ShieldAlert, CheckCircle, Save, Plus, Trash2, Mail, Loader2 } from "lucide-react";
+import { UserCheck, ShieldAlert, CheckCircle, Save, Plus, Trash2, Mail, Loader2, Copy, Check, KeyRound } from "lucide-react";
 import { useBreakpoint } from "../useBreakpoint";
 import { SectionCard } from "../components/SectionCard";
-import { loadSystemConfig, saveSystemConfig } from "../api";
+import { loadSystemConfig, saveSystemConfig, addUserAccount } from "../api";
 import { copy } from "../locales/ko";
 
 const locale = "ko";
@@ -19,6 +19,9 @@ export function AllowedAccountsPage({ onChanged, currentUserEmail }: { onChanged
   const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
   const [adminEmails, setAdminEmails] = useState<string[]>([]);
   const [newEmail, setNewEmail] = useState("");
+  const [isAdminChecked, setIsAdminChecked] = useState(false);
+  const [tempPassInfo, setTempPassInfo] = useState<{ email: string; tempPass: string } | null>(null);
+  const [copied, setCopied] = useState(false);
  
   // 전체 설정 로드 후 이메일 목록만 추출
   const fetchConfig = async () => {
@@ -77,9 +80,32 @@ export function AllowedAccountsPage({ onChanged, currentUserEmail }: { onChanged
       return;
     }
 
-    const updatedEmails = [...allowedEmails, emailToAdd];
-    await saveConfig(updatedEmails, adminEmails, t.addSuccess);
-    setNewEmail("");
+    setSaving(true);
+    setSuccessMsg("");
+    setErrorMsg("");
+    setTempPassInfo(null);
+    try {
+      const res = await addUserAccount(emailToAdd, isAdminChecked);
+      if (res.ok) {
+        setAllowedEmails((prev) => [...prev, emailToAdd]);
+        if (isAdminChecked) {
+          setAdminEmails((prev) => [...prev, emailToAdd]);
+        }
+        setSuccessMsg(t.addSuccess);
+        setTimeout(() => setSuccessMsg(""), 3000);
+        if (res.tempPassword) {
+          setTempPassInfo({ email: emailToAdd, tempPass: res.tempPassword });
+        }
+        setNewEmail("");
+        setIsAdminChecked(false);
+        if (onChanged) onChanged();
+      }
+    } catch (err: any) {
+      console.error("Failed to add user account:", err);
+      setErrorMsg(err.message || t.settingsSaveFailed);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // 이메일 삭제
@@ -106,6 +132,33 @@ export function AllowedAccountsPage({ onChanged, currentUserEmail }: { onChanged
     const updatedEmails = allowedEmails.filter((email) => email !== emailToDelete);
     const updatedAdmins = adminEmails.filter((email) => email !== emailToDelete);
     await saveConfig(updatedEmails, updatedAdmins, t.deleteSuccess);
+  };
+
+  // 임시 비밀번호 재발급
+  const handleResetPassword = async (email: string) => {
+    const confirmMsg = t.resetPasswordConfirm.replace("{email}", email);
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    setSaving(true);
+    setSuccessMsg("");
+    setErrorMsg("");
+    setTempPassInfo(null);
+    try {
+      const isEmailAdmin = adminEmails.includes(email);
+      const res = await addUserAccount(email, isEmailAdmin);
+      if (res.ok && res.tempPassword) {
+        setSuccessMsg(t.resetPasswordSuccess);
+        setTimeout(() => setSuccessMsg(""), 3000);
+        setTempPassInfo({ email, tempPass: res.tempPassword });
+      }
+    } catch (err: any) {
+      console.error("Failed to reset password:", err);
+      setErrorMsg(err.message || t.settingsSaveFailed);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // 관리자 권한 토글
@@ -180,7 +233,7 @@ export function AllowedAccountsPage({ onChanged, currentUserEmail }: { onChanged
           >
             <form onSubmit={handleAddEmail} className="space-y-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-neutral">Google Account Email</label>
+                <label className="text-xs font-semibold text-neutral">Account Email</label>
                 <div className="relative flex items-center">
                   <Mail className="absolute left-3 h-4 w-4 text-assistive" />
                   <input
@@ -193,6 +246,24 @@ export function AllowedAccountsPage({ onChanged, currentUserEmail }: { onChanged
                   />
                 </div>
               </div>
+
+              <div className="flex items-center gap-2 px-1">
+                <input
+                  type="checkbox"
+                  id="isAdmin"
+                  checked={isAdminChecked}
+                  onChange={(e) => setIsAdminChecked(e.target.checked)}
+                  disabled={loading || saving}
+                  className="h-4 w-4 cursor-pointer rounded border-slate-300/80 bg-white/50 text-primary transition-colors focus:ring-primary dark:border-slate-800/80 dark:bg-slate-950/40 dark:focus:ring-primary"
+                />
+                <label
+                  htmlFor="isAdmin"
+                  className="cursor-pointer select-none text-xs text-neutral hover:text-strong transition"
+                >
+                  {t.isAdminUser}
+                </label>
+              </div>
+
               <button
                 type="submit"
                 disabled={loading || saving || !newEmail.trim()}
@@ -206,6 +277,35 @@ export function AllowedAccountsPage({ onChanged, currentUserEmail }: { onChanged
                 <span>{saving ? "저장 중..." : t.addAccount}</span>
               </button>
             </form>
+
+            {tempPassInfo && (
+              <div className="mt-4 p-4 rounded-xl border border-blue-500/20 bg-blue-500/5 dark:bg-blue-500/10 space-y-2 animate-in fade-in slide-in-from-top duration-300">
+                <div className="text-xs font-bold text-blue-500 flex items-center gap-1.5">
+                  <ShieldAlert size={14} />
+                  <span>{t.tempPasswordIssued}</span>
+                </div>
+                <p className="text-[11px] text-neutral leading-relaxed">
+                  {t.tempPasswordAlert}
+                </p>
+                <div className="flex items-center gap-2 bg-normal/30 border border-normal p-2 rounded-lg mt-1">
+                  <code className="text-xs font-mono font-bold text-strong select-all flex-grow break-all px-1">
+                    {tempPassInfo.tempPass}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(tempPassInfo.tempPass);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="p-1.5 hover:bg-normal/50 rounded-md transition text-primary flex items-center gap-1 text-[11px] font-semibold flex-shrink-0"
+                  >
+                    {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                    <span>{copied ? t.copySuccess : t.copyTempPassword}</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </SectionCard>
         </div>
 
@@ -271,6 +371,15 @@ export function AllowedAccountsPage({ onChanged, currentUserEmail }: { onChanged
                         </button>
                         <button
                           type="button"
+                          onClick={() => handleResetPassword(email)}
+                          disabled={saving}
+                          className="p-2 text-neutral hover:text-amber-600 hover:bg-amber-500/10 rounded-lg transition-colors flex-shrink-0"
+                          title={t.resetPasswordTooltip}
+                        >
+                          <KeyRound size={16} />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleDeleteEmail(email)}
                           disabled={saving}
                           className="p-2 text-neutral hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors flex-shrink-0"
@@ -285,7 +394,7 @@ export function AllowedAccountsPage({ onChanged, currentUserEmail }: { onChanged
               </div>
             )}
             <div className="mt-4 text-[10px] text-assistive">
-              * 여기에 등록된 구글 이메일 주소만 OAuth 인증 후 대시보드 시스템에 정상적으로 로그인 및 접근할 수 있습니다.
+              * 여기에 등록된 계정 이메일 주소로 구글 OAuth 인증 또는 발급된 임시 비밀번호를 통해 대시보드 시스템에 로그인할 수 있습니다.
             </div>
           </SectionCard>
         </div>

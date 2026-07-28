@@ -1,6 +1,7 @@
 import express from "express";
 import crypto from "node:crypto";
-import { saveSession, getSession, deleteSession, getUserPasswordHash, updateUserCredentials } from "@myhome/shared";
+import { saveSession, getSession, deleteSession, getUserPasswordHash, updateUserCredentials, isTemporaryPassword, getDb } from "@myhome/shared";
+import { getSystemConfig, saveSystemConfig } from "./storage.js";
 
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -174,7 +175,7 @@ export function createAuthRouter() {
       const maxAgeSeconds = 30 * 24 * 60 * 60; // 30일
       const expiresAt = Math.floor(Date.now() / 1000) + maxAgeSeconds;
 
-      saveSession(sessionId, email, expiresAt);
+      saveSession(sessionId, email, expiresAt, "google");
 
       // 5. HTTP-Only 쿠키 굽고 대시보드로 이동
       res.setHeader(
@@ -223,11 +224,13 @@ export function createAuthRouter() {
     const allowedEmailsEnv = process.env.ALLOWED_EMAILS || "";
     const adminEmailsEnv = process.env.ADMIN_EMAILS || "";
     const isAdmin = isUserAdmin(session.email, allowedEmailsEnv, adminEmailsEnv);
+    const isTemp = session.loginMethod === "local" && isTemporaryPassword(session.email);
 
     res.json({
       isAuthenticated: true,
       email: session.email,
       isAdmin,
+      isTemporaryPassword: isTemp
     });
   });
 
@@ -267,7 +270,7 @@ export function createAuthRouter() {
     const maxAgeSeconds = 30 * 24 * 60 * 60; // 30일
     const expiresAt = Math.floor(Date.now() / 1000) + maxAgeSeconds;
 
-    saveSession(sessionId, lowerEmail, expiresAt);
+    saveSession(sessionId, lowerEmail, expiresAt, "local");
 
     // HTTP-Only 쿠키
     res.setHeader(
@@ -275,7 +278,11 @@ export function createAuthRouter() {
       `session_id=${sessionId}; Path=/; HttpOnly; Max-Age=${maxAgeSeconds}; SameSite=Lax`
     );
 
-    res.json({ ok: true, email: lowerEmail });
+    res.json({
+      ok: true,
+      email: lowerEmail,
+      isTemporaryPassword: isTemporaryPassword(lowerEmail)
+    });
   });
 
   router.post("/credentials", (req, res) => {
@@ -310,12 +317,87 @@ export function createAuthRouter() {
       // 세션 내부 이메일도 변경해줌
       const maxAgeSeconds = 30 * 24 * 60 * 60;
       const expiresAt = Math.floor(Date.now() / 1000) + maxAgeSeconds;
-      saveSession(sessionId, newEmail, expiresAt);
+      saveSession(sessionId, newEmail, expiresAt, session.loginMethod || undefined);
 
       res.json({ ok: true, email: newEmail });
     } catch (err: any) {
       console.error("❌ Failed to update credentials:", err);
       res.status(500).json({ error: err.message || "설정 변경에 실패했습니다." });
+    }
+  });
+
+  router.post("/users", authMiddleware, adminRequired, async (req, res) => {
+    const { email, isAdmin } = req.body;
+    if (!email || typeof email !== "string" || !email.trim()) {
+      res.status(400).json({ error: "이메일은 필수입니다." });
+      return;
+    }
+
+    const lowerEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(lowerEmail)) {
+      res.status(400).json({ error: "올바르지 않은 이메일 형식입니다." });
+      return;
+    }
+
+    try {
+      // 1. 임시 비밀번호 생성 (8자리 랜덤 16진수)
+      const tempPassword = crypto.randomBytes(4).toString("hex");
+      const passwordHash = hashPassword(tempPassword);
+
+      // 2. user_settings DB 레코드 생성 또는 업데이트
+      const db = getDb();
+      const now = new Date().toISOString();
+      const existing = db.prepare("SELECT email FROM user_settings WHERE email = ?").get(lowerEmail);
+
+      if (!existing) {
+        db.prepare(`
+          INSERT INTO user_settings (email, telegram_bot_token, telegram_chat_id, kakao_rest_api_key, alerted_dedupe_keys, password_hash, is_temporary_password, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(lowerEmail, null, null, null, "[]", passwordHash, 1, now);
+      } else {
+        db.prepare(`
+          UPDATE user_settings
+          SET password_hash = ?, is_temporary_password = 1, updated_at = ?
+          WHERE email = ?
+        `).run(passwordHash, now, lowerEmail);
+      }
+
+      // 3. ALLOWED_EMAILS 에 추가
+      const config = await getSystemConfig();
+      const allowedEmailsEnv = config.allowedEmails || process.env.ALLOWED_EMAILS || "";
+      let allowedList = allowedEmailsEnv
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+
+      if (!allowedList.includes(lowerEmail)) {
+        allowedList.push(lowerEmail);
+      }
+
+      // 4. ADMIN_EMAILS 에 추가
+      let adminList = (config.adminEmails || process.env.ADMIN_EMAILS || "")
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+
+      if (isAdmin) {
+        if (!adminList.includes(lowerEmail)) {
+          adminList.push(lowerEmail);
+        }
+      } else {
+        adminList = adminList.filter((e) => e !== lowerEmail);
+      }
+
+      await saveSystemConfig({
+        allowedEmails: allowedList.join(","),
+        adminEmails: adminList.join(",")
+      });
+
+      res.json({ ok: true, email: lowerEmail, tempPassword, isAdmin: isAdmin || false });
+    } catch (err: any) {
+      console.error("❌ Failed to add user with temporary password:", err);
+      res.status(500).json({ error: err.message || "계정 추가에 실패했습니다." });
     }
   });
 

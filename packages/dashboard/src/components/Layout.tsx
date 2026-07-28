@@ -5,7 +5,7 @@ import { useBreakpoint } from "../useBreakpoint";
 import { useTheme } from "../useTheme";
 import packageJson from "../../package.json";
 
-export type View = "dashboard" | "rules" | "explore" | "settings" | "analytics" | "complexAnalysis" | "dbAdmin" | "collect" | "nearby" | "allowedAccounts" | "activityLog";
+export type View = "dashboard" | "rules" | "settings" | "analytics" | "complexAnalysis" | "dbAdmin" | "collect" | "nearby" | "allowedAccounts" | "activityLog";
 
 interface NavItemMeta {
   key: View;
@@ -17,7 +17,6 @@ interface NavItemMeta {
 
 const NAV_ITEMS: NavItemMeta[] = [
   { key: "dashboard", label: "대시보드", compactLabel: "대시보드", adminOnly: false, Icon: LayoutDashboard },
-  { key: "explore", label: "실거래 집계", compactLabel: "집계", adminOnly: false, Icon: History },
   { key: "analytics", label: "종합 현황", compactLabel: "현황", adminOnly: false, Icon: BarChart3 },
   { key: "complexAnalysis", label: "단지 분석", compactLabel: "단지", adminOnly: false, Icon: Building2 },
   { key: "nearby", label: "역세권 분석", compactLabel: "역세권", adminOnly: false, Icon: Compass },
@@ -25,13 +24,12 @@ const NAV_ITEMS: NavItemMeta[] = [
   { key: "collect", label: "수집 현황", compactLabel: "수집", adminOnly: true, Icon: ClipboardList },
   { key: "activityLog", label: "활동 로그", compactLabel: "로그", adminOnly: true, Icon: Activity },
   { key: "dbAdmin", label: "데이터베이스", compactLabel: "DB", adminOnly: true, Icon: Database },
-  { key: "allowedAccounts", label: "승인 계정", compactLabel: "승인", adminOnly: true, Icon: UserCheck },
+  { key: "allowedAccounts", label: "계정 관리", compactLabel: "계정", adminOnly: true, Icon: UserCheck },
   { key: "settings", label: "환경 설정", compactLabel: "설정", adminOnly: false, Icon: Settings }
 ];
 
 const DEFAULT_ORDER: View[] = [
   "dashboard",
-  "explore",
   "analytics",
   "complexAnalysis",
   "rules",
@@ -294,7 +292,12 @@ export function Layout({
           {/* User profile and popup triggers */}
           <div className="shrink-0 border-t border-slate-200 dark:border-slate-800 px-2 py-3 relative" ref={menuRef}>
             {menuOpen && (
-              <div className="absolute bottom-full left-2 right-2 mb-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg overflow-hidden z-50 animate-fade-in-up">
+              <div className={classNames(
+                "absolute border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-lg overflow-hidden z-50 animate-fade-in-up rounded-xl",
+                collapsed
+                  ? "bottom-3 left-full ml-2 w-48 mb-0"
+                  : "bottom-full left-2 right-2 mb-1"
+              )}>
                 {/* Theme options */}
                 <div className="flex items-center gap-1 px-3 py-2 border-b border-slate-100 dark:border-slate-800">
                   <span className="text-app-caption text-slate-500 dark:text-slate-400 flex-1">

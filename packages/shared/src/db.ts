@@ -227,6 +227,16 @@ export function initDb(): void {
   if (!userSettingsColNames.has('password_hash')) {
     db.exec('ALTER TABLE user_settings ADD COLUMN password_hash TEXT');
   }
+  if (!userSettingsColNames.has('is_temporary_password')) {
+    db.exec('ALTER TABLE user_settings ADD COLUMN is_temporary_password INTEGER DEFAULT 0');
+  }
+
+  // -- sessions 테이블 login_method 컬럼 마이그레이션 (기존 DB 호환)
+  const sessionsCols = db.prepare("PRAGMA table_info(sessions)").all() as { name: string }[];
+  const sessionsColNames = new Set(sessionsCols.map((c: any) => c.name));
+  if (!sessionsColNames.has('login_method')) {
+    db.exec('ALTER TABLE sessions ADD COLUMN login_method TEXT');
+  }
 
   // -- rules 테이블 alert_time 컬럼 마이그레이션 (기존 DB 호환)
   const rulesCols = db.prepare("PRAGMA table_info(rules)").all() as { name: string }[];
@@ -1373,24 +1383,28 @@ export function getGeocodeStats(): { total: number; geocoded: number; pending: n
 /**
  * 세션 저장
  */
-export function saveSession(id: string, email: string, expiresAt: number): void {
+export function saveSession(id: string, email: string, expiresAt: number, loginMethod?: string): void {
   const db = getDb();
   db.prepare(`
-    INSERT INTO sessions (id, email, expires_at)
-    VALUES (?, ?, ?)
-  `).run(id, email, expiresAt);
+    INSERT INTO sessions (id, email, expires_at, login_method)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      email = excluded.email,
+      expires_at = excluded.expires_at,
+      login_method = COALESCE(excluded.login_method, sessions.login_method)
+  `).run(id, email, expiresAt, loginMethod ?? null);
 }
 
 /**
  * 세션 조회
  */
-export function getSession(id: string): { email: string; expiresAt: number } | null {
+export function getSession(id: string): { email: string; expiresAt: number; loginMethod: string | null } | null {
   const db = getDb();
   const row = db.prepare(`
-    SELECT email, expires_at AS expiresAt
+    SELECT email, expires_at AS expiresAt, login_method AS loginMethod
     FROM sessions
     WHERE id = ?
-  `).get(id) as { email: string; expiresAt: number } | undefined;
+  `).get(id) as { email: string; expiresAt: number; loginMethod: string | null } | undefined;
   
   if (!row) return null;
   return row;
@@ -2186,7 +2200,7 @@ export function updateUserCredentials(
   if (passwordHash !== null) {
     db.prepare(`
       UPDATE user_settings
-      SET password_hash = ?, updated_at = ?
+      SET password_hash = ?, is_temporary_password = 0, updated_at = ?
       WHERE email = ?
     `).run(passwordHash, now, next);
   }
@@ -2204,5 +2218,15 @@ export function updateUserCredentials(
     // 구 이메일 레코드 삭제
     db.prepare("DELETE FROM user_settings WHERE email = ?").run(current);
   }
+}
+
+export function isTemporaryPassword(email: string): boolean {
+  const db = getDb();
+  const row = db.prepare(`
+    SELECT is_temporary_password AS isTemp
+    FROM user_settings
+    WHERE email = ?
+  `).get(email.toLowerCase()) as { isTemp: number } | undefined;
+  return row?.isTemp === 1;
 }
 

@@ -29,3 +29,9 @@
 | 05 | **프론트엔드 UI, Recharts 차트, 반응형/i18n** | [docs/05_DESIGN.md](file:///e:/apps/myhome/docs/05_DESIGN.md) |
 | 06 | **개발 진행 현황 & Phase별 로드맵** | [docs/06_ROADMAP.md](file:///e:/apps/myhome/docs/06_ROADMAP.md) |
 | 07 | **지역 검색 및 주소 자동완성 기능** | [docs/07_REGION_SEARCH.md](file:///e:/apps/myhome/docs/07_REGION_SEARCH.md) |
+| 08 | **부동산원 OpenAPI 명세 및 호출 가이드** | [docs/08_RONE_API.md](file:///e:/apps/myhome/docs/08_RONE_API.md) |
+| 08-1 | **부동산원 통계표 코드 목록** | [docs/08-1_RONE_API_LIST.md](file:///e:/apps/myhome/docs/08-1_RONE_API_LIST.md) |
+| 08-2 | **부동산원 지역코드 마스터 목록** | [docs/08-2_RONE_API_REGION_CODE.md](file:///e:/apps/myhome/docs/08-2_RONE_API_REGION_CODE.md) |
+
+
+

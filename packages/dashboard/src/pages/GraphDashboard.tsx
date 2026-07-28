@@ -53,7 +53,26 @@ export default function GraphDashboard({ onNavigateToRules, onSelectComplex, con
   };
 
   useEffect(() => {
-    fetchTransactions();
+    const params = new URLSearchParams(window.location.search);
+    const urlLawdCode = params.get("lawdCode");
+    const urlRegionName = params.get("regionName");
+    const urlStartDate = params.get("startDate");
+    const urlEndDate = params.get("endDate");
+
+    if (urlLawdCode) {
+      const activeFilter: GraphFilter = {
+        lawdCode: urlLawdCode,
+        startDate: urlStartDate || filter.startDate,
+        endDate: urlEndDate || filter.endDate
+      };
+      setFilter(activeFilter);
+      if (urlRegionName) {
+        setRegionName(decodeURIComponent(urlRegionName));
+      }
+      void fetchTransactions(activeFilter);
+    } else {
+      void fetchTransactions(filter);
+    }
   }, []);
 
   const handleFilterChange = (newFilter: GraphFilter, newRegionName: string) => {

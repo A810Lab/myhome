@@ -4,15 +4,23 @@ export function StatCard({
   icon: Icon,
   label,
   value,
-  tone = "default"
+  tone = "default",
+  onClick
 }: {
   icon: any;
   label: string;
   value: string;
   tone?: "default" | "good" | "warn";
+  onClick?: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-normal bg-elevated p-4 shadow-sm">
+    <div 
+      onClick={onClick}
+      className={classNames(
+        "rounded-xl border border-normal bg-elevated p-4 shadow-sm",
+        onClick && "cursor-pointer hover:border-primary transition-colors duration-200"
+      )}
+    >
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-neutral">{label}</span>
         <Icon

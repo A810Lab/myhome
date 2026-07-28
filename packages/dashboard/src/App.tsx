@@ -3,7 +3,6 @@ import { loadDashboard, checkAuth, logout, logActivity } from "./api";
 import { Layout, type View } from "./components/Layout";
 import { DashboardPage } from "./pages/Dashboard";
 import { LoginPage } from "./pages/Login";
-import { ExplorePage } from "./pages/Explore";
 import { RulesPage } from "./pages/Rules";
 import { SettingsPage } from "./pages/Settings";
 import GraphDashboard from "./pages/GraphDashboard";
@@ -13,10 +12,11 @@ import { DatabaseAdminPage } from "./pages/DatabaseAdmin";
 import { CollectPage } from "./pages/Collect";
 import { AllowedAccountsPage } from "./pages/AllowedAccountsPage";
 import { ActivityLogPage } from "./pages/ActivityLog";
+import { TempPasswordResetModal } from "./components/TempPasswordResetModal";
 import type { DashboardState } from "./types";
 
 function App() {
-  const [auth, setAuth] = useState<{ isAuthenticated: boolean; email?: string; isAdmin?: boolean } | null>(null);
+  const [auth, setAuth] = useState<{ isAuthenticated: boolean; email?: string; isAdmin?: boolean; isTemporaryPassword?: boolean } | null>(null);
   const [state, setState] = useState<DashboardState | undefined>();
   const [error, setError] = useState("");
   const [view, setView] = useState<View>(() => {
@@ -25,7 +25,6 @@ function App() {
     const validViews: View[] = [
       "dashboard",
       "rules",
-      "explore",
       "settings",
       "analytics",
       "complexAnalysis",
@@ -50,7 +49,7 @@ function App() {
         const params = new URLSearchParams(window.location.search);
         const viewParam = params.get("view") as View;
         const validViews: View[] = [
-          "dashboard", "rules", "explore", "settings", "analytics", 
+          "dashboard", "rules", "settings", "analytics", 
           "complexAnalysis", "dbAdmin", "collect", "nearby", "allowedAccounts", "activityLog"
         ];
         if (validViews.includes(viewParam)) {
@@ -116,14 +115,13 @@ function App() {
       const viewNames: Record<View, string> = {
         dashboard: "대시보드",
         rules: "알림 규칙",
-        explore: "실거래 집계",
         settings: "환경 설정",
         analytics: "종합 현황",
         complexAnalysis: "단지 분석",
         dbAdmin: "데이터베이스 관리",
         collect: "수집 현황",
         nearby: "역세권 분석",
-        allowedAccounts: "승인 계정 관리",
+        allowedAccounts: "계정 관리",
         activityLog: "활동 로그"
       };
       const name = viewNames[view] || view;
@@ -166,10 +164,22 @@ function App() {
     return <LoginPage />;
   }
 
+  if (auth.isTemporaryPassword && auth.email) {
+    return (
+      <TempPasswordResetModal
+        email={auth.email}
+        onResetSuccess={() => {
+          setAuth((prev) => (prev ? { ...prev, isTemporaryPassword: false } : null));
+          void refresh();
+        }}
+      />
+    );
+  }
+
   return (
     <Layout view={view} onNavigate={setView} onLogout={handleLogout} isAdmin={auth?.isAdmin} userEmail={auth?.email}>
       {error && <p className="mb-4 text-sm text-red-500 font-medium">{error}</p>}
-      {view === "dashboard" && <DashboardPage state={state} onChanged={() => void refresh()} />}
+      {view === "dashboard" && <DashboardPage state={state} onChanged={() => void refresh()} onNavigate={setView} isAdmin={auth?.isAdmin} />}
       {view === "rules" && (
         <RulesPage
           state={state}
@@ -180,7 +190,6 @@ function App() {
           isAdmin={auth?.isAdmin}
         />
       )}
-      {view === "explore" && <ExplorePage />}
       {view === "analytics" && (
         <GraphDashboard
           onNavigateToRules={handleNavigateToRules}

@@ -896,11 +896,12 @@ export default function OverviewTab({
   }, [filteredData, activeRegionFilter]);
 
   // 지역별 색상 정의 (WDS / 시맨틱 디자인 토큰 활용)
+  // 평균 실거래가 라인의 색상(var(--color-chart-median), 보라색)과 겹쳐서 안 보이는 문제를 방지하기 위해 
+  // 바 차트용 지역 컬러 목록에서 보라색을 제외합니다.
   const CHART_COLORS = React.useMemo(() => [
     "var(--color-chart-primary)", // 파랑
     "var(--color-chart-accent)",  // 주황/노랑
     "var(--color-chart-min)",     // 초록
-    "var(--color-chart-median)",  // 보라
     "var(--color-chart-floor)",   // 핑크
     "var(--color-chart-max)",     // 빨강
   ], []);
@@ -1424,10 +1425,11 @@ export default function OverviewTab({
                 </button>
 
                 {/* 거래수가 활성화되어 있을 때만 지역별 컬러 뱃지 표시 */}
+                {/* 탭처럼 오해되지 않도록 배경(bg)과 테두리(border)를 제거하고 단순 라벨로 렌더링합니다. */}
                 {complexSeriesVisible.거래수 && uniqueRegionsInChart.map((region) => (
                   <div
                     key={region}
-                    className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 dark:bg-slate-900 border border-normal text-[10px] text-neutral font-semibold"
+                    className="flex items-center gap-1.5 px-1 py-0.5 text-[10px] text-neutral font-semibold select-none"
                   >
                     <span
                       className="inline-block w-2 h-2 rounded-full"
@@ -1558,6 +1560,7 @@ export default function OverviewTab({
                       dataKey="거래수"
                       radius={[4, 4, 0, 0]}
                       cursor="pointer"
+                      fillOpacity={0.85}
                       onClick={(data: any) => {
                         if (data && data.name && onSelectComplex) {
                           onSelectComplex(data.name);
@@ -1581,9 +1584,9 @@ export default function OverviewTab({
                       type="monotone"
                       dataKey="평균가"
                       stroke="var(--color-chart-median)"
-                      strokeWidth={2}
-                      activeDot={{ r: 6 }}
-                      dot={{ cursor: "pointer", r: 4 }}
+                      strokeWidth={3}
+                      activeDot={{ r: 6, stroke: "var(--color-semantic-background-elevated-normal)", strokeWidth: 2 }}
+                      dot={{ cursor: "pointer", r: 4, stroke: "var(--color-semantic-background-elevated-normal)", strokeWidth: 1.5 }}
                       onClick={(data: any) => {
                         const name = data?.name || data?.activeLabel || data?.payload?.name;
                         if (name && onSelectComplex) {
