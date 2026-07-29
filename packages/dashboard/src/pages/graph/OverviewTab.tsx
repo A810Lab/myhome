@@ -1458,7 +1458,7 @@ export default function OverviewTab({
                   data={complexChartData}
                   margin={{ top: 15, right: 15, left: 15, bottom: 25 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <CartesianGrid stroke="none" />
                   <XAxis
                     dataKey="name"
                     stroke="#64748b"
@@ -1558,6 +1558,7 @@ export default function OverviewTab({
                     <Bar
                       yAxisId="left"
                       dataKey="거래수"
+                      barSize={16}
                       radius={[4, 4, 0, 0]}
                       cursor="pointer"
                       fillOpacity={0.85}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useKakaoMap } from "../../useKakaoMap";
 import { SectionCard } from "../../components/SectionCard";
 import { StatCard } from "../../components/StatCard";
@@ -97,7 +97,6 @@ export default function NearbyStationTab({ onSelectComplex, onNavigateToRules }:
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [showGeocodeAdmin, setShowGeocodeAdmin] = useState(false);
-  const [activeListTab, setActiveListTab] = useState<"db" | "live">("db");
   const [enableLive, setEnableLive] = useState(false);
 
   // 최근 검색어 상태 추가
@@ -197,6 +196,66 @@ export default function NearbyStationTab({ onSelectComplex, onNavigateToRules }:
   const circleRef = useRef<any>(null);
   const overlaysRef = useRef<any[]>([]);
 
+  // 통합 단지 목록 병합 및 정렬 (지하철역으로부터의 거리순)
+  const mergedComplexes = useMemo(() => {
+    if (!searchResult) return [];
+
+    const dbMap = new globalThis.Map<string, {
+      name: string;
+      distanceM: number | null;
+      dongName: string | null;
+      jibun: string | null;
+      lat: number | null;
+      lng: number | null;
+      lawdCode: string;
+      regionName?: string;
+      hasDbData: boolean;
+    }>();
+
+    // 1. 사전 집계 기반 단지 추가
+    searchResult.complexes.forEach((c) => {
+      dbMap.set(c.name, {
+        name: c.name,
+        distanceM: c.distanceM,
+        dongName: c.dongName,
+        jibun: c.jibun,
+        lat: c.lat,
+        lng: c.lng,
+        lawdCode: c.lawdCode,
+        regionName: c.regionName,
+        hasDbData: true
+      });
+    });
+
+    // 2. 실시간 조회 기반 단지 추가 (중복 방지)
+    searchResult.liveComplexes.forEach((c) => {
+      if (!dbMap.has(c.name)) {
+        dbMap.set(c.name, {
+          name: c.name,
+          distanceM: c.distanceM,
+          dongName: c.dongName,
+          jibun: c.jibun,
+          lat: c.lat,
+          lng: c.lng,
+          lawdCode: c.lawdCode,
+          hasDbData: c.hasDbData
+        });
+      } else {
+        const existing = dbMap.get(c.name)!;
+        if (existing.distanceM === null || existing.distanceM === undefined) {
+          existing.distanceM = c.distanceM;
+        }
+      }
+    });
+
+    // 3. 거리순 정렬
+    return Array.from(dbMap.values()).sort((a: any, b: any) => {
+      const distA = a.distanceM ?? 999999;
+      const distB = b.distanceM ?? 999999;
+      return distA - distB;
+    });
+  }, [searchResult]);
+
   // 1. Geocoding 통계 조회
   const fetchGeocodeStats = async () => {
     try {
@@ -236,9 +295,6 @@ export default function NearbyStationTab({ onSelectComplex, onNavigateToRules }:
         stationLawdCode: result.stationLawdCode ?? null,
       });
 
-      // DB 집계 단지(사전 집계 기반)를 항상 우선 노출하므로 db 탭을 기본 선택
-      setActiveListTab("db");
-      
       saveRecentStation(queryStr);
       setRecentStations(loadRecentStations());
 
@@ -889,220 +945,139 @@ export default function NearbyStationTab({ onSelectComplex, onNavigateToRules }:
           {/* 메인 결과 뷰 */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
             {/* 단지 목록 (탭 분리) */}
-            <div className="lg:col-span-1 order-2 lg:order-1 h-full">
+            <div className="lg:col-span-1 order-2 lg:order-2 h-full">
               <div className="bg-elevated border border-normal rounded-xl flex flex-col" style={{ height: "550px" }}>
-                {/* 탭 헤더 */}
-                <div className="flex items-center border-b border-normal shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setActiveListTab("db")}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                      activeListTab === "db"
-                        ? "border-emerald-500 text-emerald-600"
-                        : "border-transparent text-neutral hover:text-strong"
-                    }`}
-                  >
-                    <Database size={12} />
-                    {t.dbAggregateTab || "사전 집계 기반"}
-                    <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
-                      activeListTab === "db" ? "bg-emerald-500 text-white" : "bg-alternative text-neutral"
-                    }`}>
-                      {searchResult.complexes.length}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveListTab("live")}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-bold border-b-2 transition-colors ${
-                      activeListTab === "live"
-                        ? "border-primary text-primary"
-                        : "border-transparent text-neutral hover:text-strong"
-                    }`}
-                  >
-                    <Zap size={12} />
-                    {t.liveSearchTab || "실시간 조회 기반"}
-                    <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-black ${
-                      activeListTab === "live" ? "bg-primary text-white" : "bg-alternative text-neutral"
-                    }`}>
-                      {searchResult.liveComplexes.length}
-                    </span>
-                  </button>
+                {/* 탭 헤더 대신 심플 타이틀 헤더 */}
+                <div className="flex items-center justify-between border-b border-normal px-4 py-3 shrink-0 select-none">
+                  <span className="text-xs font-black text-strong flex items-center gap-1.5">
+                    <Database size={13} className="text-primary" />
+                    {t.nearbyComplexesTitle || "반경 내 단지 정보"}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-primary/10 text-primary border border-primary-200/20">
+                    {mergedComplexes.length} {t.unitComplex || "개"}
+                  </span>
                 </div>
 
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                  {/* 실시간 단지 탭 */}
-                  {activeListTab === "live" && (
-                    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                      {searchResult.liveComplexes.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-8">
-                          <Zap className="text-assistive h-8 w-8 mb-2" />
-                          <p className="text-xs font-semibold text-neutral">실시간 단지 정보가 없습니다.</p>
-                          <p className="text-[10px] text-assistive mt-1">
-                            국토부 API 키 또는 카카오 API 키가 필요합니다.
-                          </p>
-                        </div>
-                      ) : (
-                        <>
-                          <p className="px-3 py-1.5 text-[10px] text-neutral bg-alternative/50 border-b border-normal/50 shrink-0">
-                            <span className="font-bold text-primary">{searchResult.stationLawdCode}</span> 지역 실거래 기반 실시간 조회
-                          </p>
-                          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-                            {searchResult.liveComplexes.map((c, idx) => (
-                              <div
-                                key={idx}
-                                className={`group p-2.5 rounded-xl border transition-all duration-200 ${
-                                  selectedLiveComplex?.name === c.name
-                                    ? "border-primary bg-primary/5"
-                                    : "border-normal bg-elevated/40 hover:bg-elevated hover:border-primary/30"
-                                }`}
-                              >
-                                <div className="flex justify-between items-start gap-2">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                      <h4 className="font-bold text-strong text-xs truncate">{c.name}</h4>
-                                      {c.hasDbData ? (
-                                        <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                                          DB ✓
-                                        </span>
-                                      ) : (
-                                        <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                                          실시간
-                                        </span>
-                                      )}
-                                    </div>
-                                    {c.distanceM !== null && (
-                                      <p className="text-[10px] text-indigo-500 font-black font-mono mt-0.5">{c.distanceM}m</p>
-                                    )}
-                                    <p className="text-[9px] text-neutral truncate mt-0.5">
-                                      {c.dongName || ""} {c.jibun || ""}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-1 shrink-0">
-                                    {c.hasDbData ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => onSelectComplex(c.name, c.lawdCode)}
-                                        className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500 hover:text-white transition-all active:scale-90 text-emerald-600"
-                                        title="단지 분석으로 이동"
-                                      >
-                                        <ChevronRight size={13} />
-                                      </button>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        disabled={!!fetchingComplex}
-                                        onClick={() => handleFetchComplex(c)}
-                                        className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500 hover:text-white transition-all active:scale-90 text-blue-500 disabled:opacity-50"
-                                        title="실거래 데이터 수집 (최근 12개월)"
-                                      >
-                                        {fetchingComplex === c.name ? (
-                                          <Loader2 size={13} className="animate-spin" />
-                                        ) : (
-                                          <Download size={13} />
-                                        )}
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      )}
+                  {mergedComplexes.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-8">
+                      <Zap className="text-assistive h-8 w-8 mb-2" />
+                      <p className="text-xs font-semibold text-neutral">반경 내 단지 정보가 없습니다.</p>
                     </div>
-                  )}
-
-                  {/* DB 집계 단지 탭 (기존 UI) */}
-                  {activeListTab === "db" && (
+                  ) : (
                     <div className="flex-1 flex flex-col min-h-0">
-                      {searchResult.complexes.length === 0 ? (
-                        <div className="flex-1 flex items-center justify-center text-xs font-semibold text-neutral">
-                          {t.noNearbyComplexes || "반경 이내에 등록된 아파트 단지가 없습니다."}
-                        </div>
-                      ) : (
-                        <div className="flex-1 flex flex-col min-h-0">
-                          {onNavigateToRules && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const first = searchResult.complexes[0];
-                                onNavigateToRules({
-                                  regionName: first.regionName,
-                                  regionCode: first.lawdCode,
-                                  apartmentKeywords: searchResult.complexes.map((c) => c.name),
-                                });
-                              }}
-                              className="w-full py-2 rounded-none bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] shrink-0"
-                              title={t.alertRegisterTip || "반경 내 모든 단지를 관심 조건 알림 규칙으로 등록합니다."}
-                            >
-                              <Bell size={13} />
-                              {t.allComplexAlertRegister || "전체 단지 알림 등록"} ({searchResult.complexes.length}{t.unitComplex || "개"})
-                            </button>
-                          )}
-                          <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-                            {searchResult.complexes.map((c, idx) => (
-                              <div
-                                key={idx}
-                                onClick={() => {
-                                  if (mapRef.current && c.lat && c.lng) {
-                                    const pos = new window.kakao.maps.LatLng(c.lat, c.lng);
-                                    mapRef.current.panTo(pos);
-                                  }
-                                }}
-                                className="group p-2.5 rounded-xl border border-normal bg-elevated/40 hover:bg-elevated hover:border-emerald-500/50 cursor-pointer transition-all duration-200 flex justify-between items-center"
-                              >
-                                <div className="space-y-0.5 min-w-0 pr-2">
-                                  <div className="flex items-center gap-1.5">
-                                    <h4 className="font-bold text-strong text-xs truncate">{c.name}</h4>
-                                    {c.hasDbData !== false && (
-                                      <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                                        DB ✓
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-[10px] text-neutral truncate">
-                                    {c.regionName} {c.dongName || ""} {c.jibun || ""}
-                                  </p>
+                      {/* 단체 알림 등록 버튼 (사전 집계 DB가 있는 단지들이 있을 때) */}
+                      {onNavigateToRules && searchResult.complexes.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const first = searchResult.complexes[0];
+                            onNavigateToRules({
+                              regionName: first.regionName,
+                              regionCode: first.lawdCode,
+                              apartmentKeywords: searchResult.complexes.map((c) => c.name),
+                            });
+                          }}
+                          className="w-full py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] shrink-0"
+                          title={t.alertRegisterTip || "반경 내 모든 단지를 관심 조건 알림 규칙으로 등록합니다."}
+                        >
+                          <Bell size={13} />
+                          {t.allComplexAlertRegister || "전체 단지 알림 등록"} ({searchResult.complexes.length}{t.unitComplex || "개"})
+                        </button>
+                      )}
+                      
+                      {/* 통합 스크롤 리스트 */}
+                      <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+                        {mergedComplexes.map((c: any, idx: number) => (
+                          <div
+                            key={idx}
+                            onClick={() => {
+                              if (mapRef.current && c.lat && c.lng) {
+                                const pos = new window.kakao.maps.LatLng(c.lat, c.lng);
+                                mapRef.current.panTo(pos);
+                              }
+                            }}
+                            className="group p-2.5 rounded-xl border border-normal bg-elevated/40 hover:bg-elevated hover:border-primary/50 cursor-pointer transition-all duration-200"
+                          >
+                            <div className="flex justify-between items-center gap-2">
+                              <div className="space-y-0.5 min-w-0 pr-2 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <h4 className="font-bold text-strong text-xs truncate max-w-[140px] md:max-w-none">{c.name}</h4>
+                                  {c.hasDbData ? (
+                                    <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                      DB ✓
+                                    </span>
+                                  ) : (
+                                    <span className="shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                                      실시간
+                                    </span>
+                                  )}
                                 </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <div className="text-right">
-                                    <span className="text-xs font-black text-indigo-500 tracking-tight">{c.distanceM}m</span>
-                                    <p className="text-[8px] text-neutral uppercase font-bold tracking-wider mt-0.5">{t.distance || "거리"}</p>
-                                  </div>
-                                  {onNavigateToRules && (
+                                <p className="text-[10px] text-neutral truncate">
+                                  {c.regionName ? `${c.regionName} ` : ""}{c.dongName || ""} {c.jibun || ""}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <div className="text-right">
+                                  <span className="text-xs font-black text-indigo-500 tracking-tight">{c.distanceM !== null ? `${c.distanceM}m` : "-"}</span>
+                                  <p className="text-[8px] text-neutral uppercase font-bold tracking-wider mt-0.5">{t.distance || "거리"}</p>
+                                </div>
+                                
+                                {c.hasDbData ? (
+                                  <>
+                                    {onNavigateToRules && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onNavigateToRules({
+                                            regionName: c.regionName || `${c.dongName}`,
+                                            regionCode: c.lawdCode,
+                                            apartmentKeywords: [c.name]
+                                          });
+                                        }}
+                                        className="p-1.5 rounded-lg bg-alternative hover:bg-emerald-500 hover:text-white transition-all active:scale-90 text-neutral"
+                                        title={t.alertRegisterBtn || "알림 규칙 등록"}
+                                      >
+                                        <Bell size={13} />
+                                      </button>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        onNavigateToRules({
-                                          regionName: c.regionName,
-                                          regionCode: c.lawdCode,
-                                          apartmentKeywords: [c.name]
-                                        });
+                                        onSelectComplex(c.name, c.lawdCode);
                                       }}
-                                      className="p-1.5 rounded-lg bg-alternative hover:bg-emerald-500 hover:text-white transition-all active:scale-90 text-neutral"
-                                      title={t.alertRegisterBtn || "알림 규칙 등록"}
+                                      className="p-1.5 rounded-lg bg-alternative hover:bg-primary hover:text-white transition-all active:scale-90 text-neutral"
+                                      title={t.complexAnalysisLink || "단지 분석으로 이동"}
                                     >
-                                      <Bell size={13} />
+                                      <ArrowRight size={13} />
                                     </button>
-                                  )}
+                                  </>
+                                ) : (
                                   <button
                                     type="button"
+                                    disabled={!!fetchingComplex}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      onSelectComplex(c.name, c.lawdCode);
+                                      handleFetchComplex(c);
                                     }}
-                                    className="p-1.5 rounded-lg bg-alternative hover:bg-primary hover:text-white transition-all active:scale-90 text-neutral"
-                                    title={t.complexAnalysisLink || "단지 분석으로 이동"}
+                                    className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500 hover:text-white transition-all active:scale-90 text-blue-500 disabled:opacity-50"
+                                    title="실거래 데이터 수집 (최근 12개월)"
                                   >
-                                    <ArrowRight size={13} />
+                                    {fetchingComplex === c.name ? (
+                                      <Loader2 size={13} className="animate-spin" />
+                                    ) : (
+                                      <Download size={13} />
+                                    )}
                                   </button>
-                                </div>
+                                )}
                               </div>
-                            ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1187,7 +1162,7 @@ export default function NearbyStationTab({ onSelectComplex, onNavigateToRules }:
 
 
             {/* 지도 */}
-            <div className="lg:col-span-2 order-1 lg:order-2 h-full">
+            <div className="lg:col-span-2 order-1 lg:order-1 h-full">
               <div className="bg-elevated border border-normal rounded-xl p-3 flex flex-col" style={{ height: "550px" }}>
                 <div className="flex justify-between items-center mb-3 shrink-0">
                   <span className="text-xs font-bold text-neutral flex items-center gap-1.5">
