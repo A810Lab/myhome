@@ -1473,8 +1473,8 @@ export default function OverviewTab({
                           <text
                             x={0}
                             y={0}
-                            dy={12}
-                            dx={-4}
+                            dy={3.5}
+                            dx={-8}
                             textAnchor="end"
                             fill="var(--color-semantic-label-neutral)"
                             fontSize={isNarrow ? 9 : 10}
@@ -1558,7 +1558,7 @@ export default function OverviewTab({
                     <Bar
                       yAxisId="left"
                       dataKey="거래수"
-                      barSize={16}
+                      barSize={32}
                       radius={[4, 4, 0, 0]}
                       cursor="pointer"
                       fillOpacity={0.85}
@@ -1586,8 +1586,8 @@ export default function OverviewTab({
                       dataKey="평균가"
                       stroke="var(--color-chart-median)"
                       strokeWidth={3}
-                      activeDot={{ r: 6, stroke: "var(--color-semantic-background-elevated-normal)", strokeWidth: 2 }}
-                      dot={{ cursor: "pointer", r: 4, stroke: "var(--color-semantic-background-elevated-normal)", strokeWidth: 1.5 }}
+                      activeDot={{ r: 6, fill: "var(--color-semantic-background-elevated-normal)", stroke: "var(--color-chart-median)", strokeWidth: 3 }}
+                      dot={{ cursor: "pointer", r: 4, fill: "var(--color-semantic-background-elevated-normal)", stroke: "var(--color-chart-median)", strokeWidth: 2.5 }}
                       onClick={(data: any) => {
                         const name = data?.name || data?.activeLabel || data?.payload?.name;
                         if (name && onSelectComplex) {
