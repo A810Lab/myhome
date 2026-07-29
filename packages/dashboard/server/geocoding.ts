@@ -946,7 +946,72 @@ function generateMockInfraRating(complexName: string) {
     weightSum += config.weight;
   }
 
-  const totalScore = Math.round((weightedScoreSum / weightSum) * 10) / 10;
+  const baseScore = Math.round((weightedScoreSum / weightSum) * 10) / 10;
+
+  // NAT (조망/환경) 가상 데이터 생성 및 가산점화
+  const natCategoryHash = hash + "NAT".charCodeAt(0) + "NAT".charCodeAt(1);
+  const natSimulatedDist = 150 + (natCategoryHash % 1300);
+  const natHasFacilities = natSimulatedDist <= 1000;
+
+  let natScore = 0;
+  let natCount = 0;
+  let natMinDistance: number | null = null;
+  let natDetails: any = null;
+
+  if (natHasFacilities) {
+    const hasWater = (natCategoryHash % 2) === 0;
+    const waterMinDistance = hasWater ? (natSimulatedDist % 900) + 100 : null;
+    const waterType = hasWater ? (natCategoryHash % 3 === 0 ? "OCEAN" : natCategoryHash % 3 === 1 ? "RIVER" : "LAKE") : null;
+
+    const hasGreen = (natCategoryHash % 3) > 0;
+    const greenMinDistance = hasGreen ? ((natSimulatedDist + 200) % 950) + 50 : null;
+    const greenType = hasGreen ? (natCategoryHash % 2 === 0 ? "FOREST" : "PARK") : null;
+
+    let sWater = 0;
+    if (waterMinDistance !== null) {
+      const d = waterMinDistance;
+      if (d <= 250) sWater = 100;
+      else if (d <= 500) sWater = 85;
+      else if (d <= 1000) sWater = 60;
+      
+      const typeWeight = waterType === "OCEAN" ? 1.2 : waterType === "RIVER" ? 1.1 : waterType === "LAKE" ? 1.0 : 0.8;
+      sWater = Math.min(100, Math.round(sWater * typeWeight));
+    }
+
+    let sGreen = 0;
+    if (greenMinDistance !== null) {
+      const d = greenMinDistance;
+      if (d <= 250) sGreen = 100;
+      else if (d <= 500) sGreen = 85;
+      else if (d <= 1000) sGreen = 60;
+      
+      const typeWeight = greenType === "PARK" ? 1.0 : 0.9;
+      sGreen = Math.min(100, Math.round(sGreen * typeWeight));
+    }
+
+    natScore = Math.max(sWater, sGreen);
+    natCount = (hasWater ? 1 : 0) + (hasGreen ? 1 : 0);
+    natMinDistance = natCount > 0 ? (waterMinDistance !== null && greenMinDistance !== null ? Math.min(waterMinDistance, greenMinDistance) : waterMinDistance ?? greenMinDistance) : null;
+
+    natDetails = {
+      waterMinDistance,
+      waterType,
+      greenMinDistance,
+      greenType
+    };
+  }
+
+  categories["NAT"] = {
+    name: "조망/환경",
+    score: natScore,
+    count: natCount,
+    minDistance: natMinDistance,
+    details: natDetails
+  };
+
+  const bonus = Math.round((natScore / 10) * 10) / 10; // 최대 10점 가산
+  const totalScore = Math.min(100, Math.round((baseScore + bonus) * 10) / 10);
+
   let grade = "D";
   if (totalScore >= 90) grade = "S";
   else if (totalScore >= 80) grade = "A";
@@ -1282,7 +1347,146 @@ export async function getComplexInfraRating(
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
 
-    const totalScore = Math.round((weightedScoreSum / weightSum) * 10) / 10;
+    const baseScore = Math.round((weightedScoreSum / weightSum) * 10) / 10;
+
+    // NAT (조망/환경) 실거래 데이터 수집 - 카테고리 AT4 + 키워드 "하천", "공원", "호수" 병렬 검색
+    let natScore = 0;
+    let natCount = 0;
+    let natMinDistance: number | null = null;
+    let natDetails: any = null;
+
+    const natQueries = [
+      `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=AT4&x=${lng}&y=${lat}&radius=1000&sort=distance`,
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent("하천")}&x=${lng}&y=${lat}&radius=1000&sort=distance`,
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent("공원")}&x=${lng}&y=${lat}&radius=1000&sort=distance`,
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent("호수")}&x=${lng}&y=${lat}&radius=1000&sort=distance`
+    ];
+
+    try {
+      const responses = await Promise.all(
+        natQueries.map(q => 
+          fetch(q, {
+            headers: { Authorization: `KakaoAK ${apiKey}` },
+            signal: AbortSignal.timeout(5000)
+          }).then(r => r.ok ? r.json() : null).catch(() => null)
+        )
+      );
+
+      let natDocs: any[] = [];
+      responses.forEach(body => {
+        if (body && body.documents) {
+          natDocs.push(...body.documents);
+        }
+      });
+
+      // 중복 장소 제거 (id 기준)
+      const seen = new Set();
+      natDocs = natDocs.filter(doc => {
+        const duplicate = seen.has(doc.id);
+        seen.add(doc.id);
+        return !duplicate;
+      });
+
+      // 거리 기준 오름차순 정렬
+      natDocs.sort((a, b) => (parseInt(a.distance) || 0) - (parseInt(b.distance) || 0));
+
+      if (natDocs.length > 0) {
+        let waterMinDistance: number | null = null;
+        let waterType: string | null = null;
+        let greenMinDistance: number | null = null;
+        let greenType: string | null = null;
+        let waterCount = 0;
+        let greenCount = 0;
+
+        natDocs.forEach((doc: any) => {
+          const cat = doc.category_name || "";
+          const name = doc.place_name || "";
+          const dist = parseInt(doc.distance) || 0;
+
+          // 바다
+          if (cat.includes("해수욕장") || name.includes("해수욕장") || name.includes("해변")) {
+            waterCount++;
+            if (waterMinDistance === null || dist < waterMinDistance) {
+              waterMinDistance = dist;
+              waterType = "OCEAN";
+            }
+          }
+          // 호수/저수지
+          else if (cat.includes("호수") || cat.includes("저수지") || name.includes("호수공원")) {
+            waterCount++;
+            if (waterMinDistance === null || dist < waterMinDistance) {
+              waterMinDistance = dist;
+              waterType = "LAKE";
+            }
+          }
+          // 강/천
+          else if (cat.includes("강") || cat.includes("계곡") || name.endsWith("강") || name.endsWith("천") || name.endsWith("하천") || name.includes("강변")) {
+            waterCount++;
+            if (waterMinDistance === null || dist < waterMinDistance) {
+              waterMinDistance = dist;
+              waterType = "RIVER";
+            }
+          }
+          // 녹지/공원
+          else if (cat.includes("공원") || cat.includes("산") || cat.includes("수목원") || cat.includes("자연") || name.includes("공원") || name.includes("수목원") || name.endsWith("산")) {
+            greenCount++;
+            if (greenMinDistance === null || dist < greenMinDistance) {
+              greenMinDistance = dist;
+              greenType = cat.includes("산") || name.endsWith("산") ? "FOREST" : "PARK";
+            }
+          }
+        });
+
+        natCount = waterCount + greenCount;
+        natMinDistance = natCount > 0 ? (waterMinDistance !== null && greenMinDistance !== null ? Math.min(waterMinDistance, greenMinDistance) : waterMinDistance ?? greenMinDistance) : null;
+
+        let sWater = 0;
+        if (waterMinDistance !== null) {
+          const d = waterMinDistance;
+          let baseVal = 0;
+          if (d <= 250) baseVal = 100;
+          else if (d <= 500) baseVal = 85;
+          else if (d <= 1000) baseVal = 60;
+          
+          const typeWeight = waterType === "OCEAN" ? 1.2 : waterType === "RIVER" ? 1.1 : waterType === "LAKE" ? 1.0 : 0.8;
+          sWater = Math.min(100, Math.round(baseVal * typeWeight));
+        }
+
+        let sGreen = 0;
+        if (greenMinDistance !== null) {
+          const d = greenMinDistance;
+          let baseVal = 0;
+          if (d <= 250) baseVal = 100;
+          else if (d <= 500) baseVal = 85;
+          else if (d <= 1000) baseVal = 60;
+          
+          const typeWeight = greenType === "PARK" ? 1.0 : 0.9;
+          sGreen = Math.min(100, Math.round(baseVal * typeWeight));
+        }
+
+        natScore = Math.max(sWater, sGreen);
+        natDetails = {
+          waterMinDistance,
+          waterType,
+          greenMinDistance,
+          greenType
+        };
+      }
+    } catch (err) {
+      console.error("[Geocoding] NAT 병렬 수집 중 에러 발생:", err);
+    }
+
+    categories["NAT"] = {
+      name: "조망/환경",
+      score: natScore,
+      count: natCount,
+      minDistance: natMinDistance,
+      details: natDetails
+    };
+
+    const bonus = Math.round((natScore / 10) * 10) / 10; // 최대 10점 가산
+    const totalScore = Math.min(100, Math.round((baseScore + bonus) * 10) / 10);
+
     let grade = "D";
     if (totalScore >= 90) grade = "S";
     else if (totalScore >= 80) grade = "A";

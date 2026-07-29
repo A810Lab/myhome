@@ -15,7 +15,7 @@ import { SectionCard } from "../../components/SectionCard";
 import { StatCard } from "../../components/StatCard";
 import { useBreakpoint } from "../../useBreakpoint";
 import { useKakaoMap } from "../../useKakaoMap";
-import { Home, Calendar, DollarSign, Layers, MapPin, Train, ShoppingBag, School, Activity, Clock, Navigation, ArrowUpDown, TrendingUp, HelpCircle, X } from "lucide-react";
+import { Home, Calendar, DollarSign, Layers, MapPin, Train, ShoppingBag, School, Activity, Clock, Navigation, ArrowUpDown, TrendingUp, HelpCircle, X, Trees, ChevronDown, ChevronUp, Zap, BookOpen, PenTool, GraduationCap, Building2, Stethoscope, ShoppingCart, Store, Waves, BarChart3, Map, Ruler } from "lucide-react";
 
 
 const i18n = {
@@ -24,17 +24,17 @@ const i18n = {
     noData: "선택한 면적대 조건의 실거래 데이터가 없습니다.",
     detailReport: "단지 전용 분석 리포트",
     allArea: "전체",
-    monthlyTrendTitle: "📈 월별 평균 가격 추이 (평균 억)",
+    monthlyTrendTitle: "월별 평균 가격 추이 (평균 억)",
     overallAvg: "전체 평균",
     complexOverallAvg: "단지 전체 평균",
-    areaAnalysisTitle: "📐 평형별 거래 분석 (평균가 & 거래량)",
-    floorAnalysisTitle: "🏢 층별 거래 분석 (거래량 & 평균가)",
+    areaAnalysisTitle: "평형별 거래 분석 (평균가 & 거래량)",
+    floorAnalysisTitle: "층별 거래 분석 (거래량 & 평균가)",
     avgPrice: "평균가",
     txCount: "거래량",
     eokUnit: "억",
     countUnit: "건",
     floorUnit: "층",
-    recentTxTitle: "📋 최근 실거래 내역 (최대 10건)",
+    recentTxTitle: "최근 실거래 내역 (최대 10건)",
     dealDate: "거래일",
     dealPrice: "거래가",
     exclusiveArea: "전용면적",
@@ -50,7 +50,7 @@ const i18n = {
     q3Price: "Q3",
     medianPrice: "중위값",
     box: "박스",
-    infraRatingTitle: "⭐ 단지 주변 입지 평가 리포트",
+    infraRatingTitle: "단지 주변 입지 평가 리포트",
     infraRatingSubtitle: "반경 1km 이내의 핵심 생활 인프라 시설의 최단 거리 및 개수를 가중치 분석하여 산출한 종합 평가 점수입니다.",
     infraTotalScore: "종합 평가 점수",
     infraGrade: "입지 등급",
@@ -66,6 +66,7 @@ const i18n = {
     infraCategoryPharmacy: "약국 (PM9)",
     infraCategoryConvStore: "편의점 (CS2)",
     infraCategorySubway: "역세권 (SW8)",
+    infraCategoryNatural: "조망/환경 (NAT)",
     infraDetailGeneralHospital: "종합/대학병원",
     infraDetailLocalClinic: "일반 병/의원",
     infraDetailLargeMart: "대형마트",
@@ -78,9 +79,18 @@ const i18n = {
     infraDetailRail: "광역/고속철도(기차)",
     infraDetailPharmacy: "약국",
     infraDetailConvStore: "편의점",
+    infraDetailWater: "수변 환경",
+    infraDetailGreen: "녹지 환경",
+    infraDetailOcean: "바다 (오션뷰)",
+    infraDetailRiver: "강 (리버뷰)",
+    infraDetailLake: "호수 (레이크뷰)",
+    infraDetailForest: "산/숲 (마운틴뷰)",
+    infraDetailPark: "공원 (공세권)",
+    infraWeightBonus: "가산 (최대 +10)",
+    infraMapAnalysisTitle: "단지 주변 입지 분석 (역세권 및 인프라)",
     
     // 입지 평가 정보 모달 번역
-    infraModalTitle: "📊 입지 평가 점수 산출 기준",
+    infraModalTitle: "입지 평가 점수 산출 기준",
     infraModalIntro: "본 입지 평가는 국토교통부 실거래 데이터의 단지 좌표를 기준으로, 카카오 Local API를 통해 실시간 조회한 반경 내 인프라(최단 거리)를 가중 평균하여 산출합니다.",
     infraModalFormulaTitle: "1. 부문별 평점 계산식",
     infraModalFormulaDesc: "각 인프라의 평점(0~100점)은 최단 거리 점수(100%)로 계산됩니다.",
@@ -93,11 +103,12 @@ const i18n = {
     infraModalMartDesc: "대형마트 (반경 1500m): 500m 이내 100점, 1000m 이내 80점, 1500m 이내 50점",
     infraModalPharmacyDesc: "약국 (반경 500m): 100m 이내 100점, 300m 이내 80점, 500m 이내 50점",
     infraModalConvDesc: "편의점 (반경 300m): 50m 이내 100점, 150m 이내 80점, 300m 이내 50점",
+    infraModalNaturalDesc: "조망/환경 (반경 1000m): 250m 이내 100점, 500m 이내 85점, 1000m 이내 60점 (수변/녹지 중 최선 반영)",
     infraModalCountTitle: "3. 시설 개수 점수 (밀집도)",
     infraModalCountDesc: "반경 내 시설 1개당 20점이 부여되며, 5개 이상일 시 만점(100점)을 획득합니다 (최대 20점 기여).",
-    infraModalWeightTitle: "3. 종합 등급 가중치 기준",
-    infraModalWeightDesc: "주거 선호도에 따라 가중 평균하여 최종 등급(S~D)을 산출합니다.",
-    infraModalWeightList: "역세권 (1.5) > 학교 (1.0) > 병원 (0.8) > 대형마트 (0.7)",
+    infraModalWeightTitle: "3. 종합 등급 산출 및 가산점 기준",
+    infraModalWeightDesc: "주거 선호도(역세권, 학교, 병원, 대형마트)에 따른 기본 가중 평균 점수에 조망/환경 점수의 10%를 가산점(최대 +10점)으로 더하여 최종 등급을 산출합니다.",
+    infraModalWeightList: "기본 가중치: 역세권 (1.5) > 학교 (1.0) > 병원 (0.8) > 대형마트 (0.7) + [가산] 조망/환경 (최대 +10점)",
     close: "닫기"
   },
   en: {
@@ -105,17 +116,17 @@ const i18n = {
     noData: "No transaction data found for the selected area filter.",
     detailReport: "Complex Analysis Report",
     allArea: "All",
-    monthlyTrendTitle: "📈 Monthly Average Price Trend (Avg in 100M KRW)",
+    monthlyTrendTitle: "Monthly Average Price Trend (Avg in 100M KRW)",
     overallAvg: "Overall Avg",
     complexOverallAvg: "Complex Overall Avg",
-    areaAnalysisTitle: "📐 Size Analysis (Avg Price & Volume)",
-    floorAnalysisTitle: "🏢 Floor Analysis (Volume & Avg Price)",
+    areaAnalysisTitle: "Size Analysis (Avg Price & Volume)",
+    floorAnalysisTitle: "Floor Analysis (Volume & Avg Price)",
     avgPrice: "Avg Price",
     txCount: "Volume",
     eokUnit: "100M",
     countUnit: "deals",
     floorUnit: "F",
-    recentTxTitle: "📋 Recent Transactions (Max 10)",
+    recentTxTitle: "Recent Transactions (Max 10)",
     dealDate: "Deal Date",
     dealPrice: "Deal Price",
     exclusiveArea: "Size",
@@ -131,7 +142,7 @@ const i18n = {
     q3Price: "Q3",
     medianPrice: "Median",
     box: "Box",
-    infraRatingTitle: "⭐ Nearby Location Infrastructure Rating Report",
+    infraRatingTitle: "Nearby Location Infrastructure Rating Report",
     infraRatingSubtitle: "Overall location score calculated based on weighted analysis of the shortest distance and quantity of key living infrastructures within a 1km radius.",
     infraTotalScore: "Overall Score",
     infraGrade: "Grade",
@@ -147,6 +158,7 @@ const i18n = {
     infraCategoryPharmacy: "Pharmacy (PM9)",
     infraCategoryConvStore: "Conv. Store (CS2)",
     infraCategorySubway: "Station Area (SW8)",
+    infraCategoryNatural: "Nature/View (NAT)",
     infraDetailGeneralHospital: "General/Univ. Hospital",
     infraDetailLocalClinic: "Local Clinic",
     infraDetailLargeMart: "Large Mart",
@@ -159,9 +171,18 @@ const i18n = {
     infraDetailRail: "Rail/Train",
     infraDetailPharmacy: "Pharmacy",
     infraDetailConvStore: "Convenience Store",
+    infraDetailWater: "Water Body",
+    infraDetailGreen: "Green Body",
+    infraDetailOcean: "Ocean (Ocean View)",
+    infraDetailRiver: "River (River View)",
+    infraDetailLake: "Lake (Lake View)",
+    infraDetailForest: "Mountain (Forest View)",
+    infraDetailPark: "Park (Park View)",
+    infraWeightBonus: "Bonus (Max +10)",
+    infraMapAnalysisTitle: "Surrounding Location Analysis (Station & Infra)",
     
     // Infrastructure rating modal translations
-    infraModalTitle: "📊 Location Score Calculation Standards",
+    infraModalTitle: "Location Score Calculation Standards",
     infraModalIntro: "This location score is calculated by weighted averaging of nearby infrastructures (distance) queried via Kakao Local API.",
     infraModalFormulaTitle: "1. Category Score Formula",
     infraModalFormulaDesc: "Each infrastructure score (0-100) is calculated based on the shortest distance score (100%).",
@@ -174,11 +195,12 @@ const i18n = {
     infraModalMartDesc: "Mart (Radius 1500m): <=500m 100pts, <=1000m 80pts, <=1500m 50pts",
     infraModalPharmacyDesc: "Pharmacy (Radius 500m): <=100m 100pts, <=300m 80pts, <=500m 50pts",
     infraModalConvDesc: "Conv. Store (Radius 300m): <=50m 100pts, <=150m 80pts, <=300m 50pts",
+    infraModalNaturalDesc: "Nature/View (Radius 1000m): <=250m 100pts, <=500m 85pts, <=1000m 60pts",
     infraModalCountTitle: "3. Density Score",
     infraModalCountDesc: "Each facility within the radius gives 20pts, up to 100pts for 5+ facilities (contributing up to 20pts to final score).",
-    infraModalWeightTitle: "3. Weighted Average for Final Grade",
-    infraModalWeightDesc: "Infrastructures are weighted according to residential preference to calculate the overall grade (S to D).",
-    infraModalWeightList: "Station Area (1.5) > School (1.0) > Hospital (0.8) > Mart (0.7)",
+    infraModalWeightTitle: "3. Final Grade & Bonus Points Standards",
+    infraModalWeightDesc: "The final grade is calculated by adding 10% of the Nature/View score as a bonus (up to +10 pts) to the base weighted average of core infrastructures (Station, School, Hospital, Mart).",
+    infraModalWeightList: "Base Weights: Station (1.5) > School (1.0) > Hospital (0.8) > Mart (0.7) + [Bonus] Nature/View (Up to +10 pts)",
     close: "Close"
   }
 };
@@ -406,6 +428,7 @@ export default function ComplexTab({
     "최대/최소": true
   });
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showDetailInfras, setShowDetailInfras] = useState(false);
 
   const toggleKey = (key: string) => {
     setHiddenKeys((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -507,7 +530,7 @@ export default function ComplexTab({
 
       const overlay = new window.kakao.maps.CustomOverlay({
         position: subPosition,
-        content: `<div style="background-color:var(--color-semantic-background-elevated-normal); border:1px solid var(--color-semantic-line-normal-normal); border-radius:12px; padding:3px 8px; font-size:10px; font-weight:700; color:var(--color-semantic-label-strong); box-shadow:0 2px 4px rgba(0,0,0,0.12); margin-top:-38px;">🚇 ${sub.name}</div>`,
+        content: `<div style="background-color:var(--color-semantic-background-elevated-normal); border:1px solid var(--color-semantic-line-normal-normal); border-radius:12px; padding:3px 8px; font-size:10px; font-weight:700; color:var(--color-semantic-label-strong); box-shadow:0 2px 4px rgba(0,0,0,0.12); margin-top:-38px;">${sub.name}</div>`,
         yAnchor: 1
       });
       overlay.setMap(map);
@@ -846,7 +869,7 @@ export default function ComplexTab({
       {/* 주변 입지 평가 리포트 섹션 */}
       {detailData.infraRating && (
         <SectionCard 
-          title={t("infraRatingTitle")}
+          title={<span className="flex items-center gap-2"><BarChart3 size={18} className="text-primary" /><span>{t("infraRatingTitle")}</span></span>}
           right={
             <button 
               type="button"
@@ -860,7 +883,11 @@ export default function ComplexTab({
         >
           <div className="flex flex-col gap-6">
             {/* 상단 종합 등급 및 설명 요약 */}
-            <div className="flex flex-col md:flex-row items-center justify-between p-5 rounded-xl bg-alternative/60 border border-normal gap-6">
+            <div 
+              onClick={() => setShowDetailInfras(!showDetailInfras)}
+              className="flex flex-col md:flex-row items-center justify-between p-5 rounded-xl bg-alternative/60 border border-normal gap-6 cursor-pointer hover:bg-alternative/90 transition select-none"
+              title="클릭하여 상세 인프라 카드 펼치기/접기"
+            >
               <div className="space-y-1.5 text-center md:text-left min-w-0 flex-1">
                 <p className="text-xs text-neutral font-medium leading-relaxed">{t("infraRatingSubtitle")}</p>
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 mt-2">
@@ -874,244 +901,302 @@ export default function ComplexTab({
                 )}
               </div>
               
-              {/* 등급 배지 */}
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-xs text-neutral font-semibold">{t("infraGrade")}</span>
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center font-extrabold text-2xl shadow-sm border ${
-                  detailData.infraRating.grade === "S" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
-                  detailData.infraRating.grade === "A" ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
-                  detailData.infraRating.grade === "B" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
-                  detailData.infraRating.grade === "C" ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
-                  "bg-rose-500/10 text-rose-500 border-rose-500/20"
-                }`}>
-                  {detailData.infraRating.grade}
+              {/* 등급 배지 및 화살표 */}
+              <div className="flex items-center gap-4 shrink-0">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-neutral font-semibold">{t("infraGrade")}</span>
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center font-extrabold text-2xl shadow-sm border ${
+                    detailData.infraRating.grade === "S" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                    detailData.infraRating.grade === "A" ? "bg-blue-500/10 text-blue-500 border-blue-500/20" :
+                    detailData.infraRating.grade === "B" ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                    detailData.infraRating.grade === "C" ? "bg-orange-500/10 text-orange-500 border-orange-500/20" :
+                    "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                  }`}>
+                    {detailData.infraRating.grade}
+                  </div>
+                </div>
+                <div className="text-assistive p-1.5 rounded-lg hover:bg-alternative transition">
+                  {showDetailInfras ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </div>
               </div>
             </div>
 
-            {/* 개별 인프라 그리드 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { code: "SW8", name: t("infraCategorySubway"), weight: "1.5 (최상)", color: "emerald", icon: Train },
-                { code: "SC4", name: t("infraCategorySchool"), weight: "1.0 (상)", color: "blue", icon: School },
-                { code: "HP8", name: t("infraCategoryHospital"), weight: "0.8 (중상)", color: "indigo", icon: Activity },
-                { code: "MT1", name: t("infraCategoryMart"), weight: "0.7 (중)", color: "purple", icon: ShoppingBag }
-              ].map((item) => {
-                const info = detailData.infraRating.categories[item.code] || { score: 0, count: 0, minDistance: null };
-                const Icon = item.icon;
-                
-                // 도보 시간 계산
-                const walkTime = info.minDistance !== null ? Math.max(1, Math.round(info.minDistance / 80)) : null;
+            {/* 개별 인프라 그리드 (아코디언 슬라이드) */}
+            <div className={`grid transition-all duration-300 ease-in-out ${showDetailInfras ? "grid-rows-[1fr] opacity-100 mt-2" : "grid-rows-[0fr] opacity-0 overflow-hidden"}`}>
+              <div className="min-h-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {[
+                    { code: "SW8", name: t("infraCategorySubway"), weight: "1.5 (최상)", color: "emerald", icon: Train },
+                    { code: "SC4", name: t("infraCategorySchool"), weight: "1.0 (상)", color: "blue", icon: School },
+                    { code: "HP8", name: t("infraCategoryHospital"), weight: "0.8 (중상)", color: "indigo", icon: Activity },
+                    { code: "MT1", name: t("infraCategoryMart"), weight: "0.7 (중)", color: "purple", icon: ShoppingBag },
+                    { code: "NAT", name: t("infraCategoryNatural"), weight: t("infraWeightBonus"), color: "teal", icon: Trees }
+                  ].map((item) => {
+                    const info = detailData.infraRating.categories[item.code] || { score: 0, count: 0, minDistance: null };
+                    const Icon = item.icon;
+                    
+                    // 도보 시간 계산
+                    const walkTime = info.minDistance !== null ? Math.max(1, Math.round(info.minDistance / 80)) : null;
 
-                return (
-                  <div key={item.code} className="bg-normal/20 border border-normal rounded-xl p-4 flex flex-col justify-between gap-4 hover:bg-normal/40 transition duration-150">
-                    <div className="space-y-2">
-                      {/* 헤더 */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-xs font-bold text-strong flex items-center gap-1.5 min-w-0">
-                          <Icon size={14} className="text-primary shrink-0" />
-                          <span className="truncate">{item.name.split(" ")[0]}</span>
-                        </span>
-                        <span className="text-[10px] text-assistive shrink-0 font-semibold bg-alternative px-1.5 py-0.5 rounded">
-                          가중치 {item.weight.split(" ")[0]}
-                        </span>
-                      </div>
-                      
-                      {/* 점수 게이지 */}
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-assistive font-semibold">{t("infraScore")}</span>
-                          <span className="font-bold text-strong font-mono">{info.score}점</span>
+                    return (
+                      <div 
+                        key={item.code} 
+                        className="bg-normal/20 border border-normal rounded-xl p-4 flex flex-col justify-between gap-4 hover:bg-normal/30 transition duration-150 h-fit"
+                      >
+                        <div className="space-y-2">
+                          {/* 헤더 */}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-strong flex items-center gap-1.5 min-w-0">
+                              <Icon size={14} className="text-primary shrink-0" />
+                              <span className="truncate">{item.name.split(" ")[0]}</span>
+                            </span>
+                            <span className="text-[10px] text-assistive shrink-0 font-semibold bg-alternative px-1.5 py-0.5 rounded">
+                              가중치 {item.weight.split(" ")[0]}
+                            </span>
+                          </div>
+                          
+                          {/* 점수 게이지 */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="text-assistive font-semibold">{t("infraScore")}</span>
+                              <span className="font-bold text-strong font-mono">{info.score}점</span>
+                            </div>
+                            <div className="w-full bg-alternative rounded-full h-1.5 overflow-hidden border border-normal">
+                              <div 
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  item.color === "emerald" ? "bg-emerald-500" :
+                                  item.color === "blue" ? "bg-blue-500" :
+                                  item.color === "teal" ? "bg-teal-500" :
+                                  item.color === "indigo" ? "bg-indigo-500" :
+                                  item.color === "purple" ? "bg-purple-500" :
+                                  "bg-amber-500"
+                                }`}
+                                style={{ width: `${info.score}%` }}
+                              />
+                            </div>
+                          </div>
                         </div>
-                        <div className="w-full bg-alternative rounded-full h-1.5 overflow-hidden border border-normal">
-                          <div 
-                            className={`h-full rounded-full transition-all duration-500 ${
-                              item.color === "emerald" ? "bg-emerald-500" :
-                              item.color === "blue" ? "bg-blue-500" :
-                              item.color === "indigo" ? "bg-indigo-500" :
-                              item.color === "purple" ? "bg-purple-500" :
-                              "bg-amber-500"
-                            }`}
-                            style={{ width: `${info.score}%` }}
-                          />
+
+                        {/* 세부 통계 정보 (details가 존재하는 경우) */}
+                        {info.details && (
+                          <div className="border-t border-normal/30 pt-2.5 space-y-1.5 text-[10px] text-neutral">
+                            {item.code === "SW8" && (
+                              <>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <Train size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailMetro")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.metroCount}개 
+                                    {info.details.metroMinDistance !== null 
+                                      ? ` (${info.details.metroMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <Zap size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailGtx")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.gtxCount}개 
+                                    {info.details.gtxMinDistance !== null 
+                                      ? ` (${info.details.gtxMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <Train size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailRail")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.railCount}개 
+                                    {info.details.railMinDistance !== null 
+                                      ? ` (${info.details.railMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                            {item.code === "SC4" && (
+                              <>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <BookOpen size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailElementary")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.elementaryCount}개 
+                                    {info.details.elementaryMinDistance !== null 
+                                      ? ` (${info.details.elementaryMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <PenTool size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailMiddle")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.middleCount}개 
+                                    {info.details.middleMinDistance !== null 
+                                      ? ` (${info.details.middleMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <GraduationCap size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailHigh")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.highCount}개 
+                                    {info.details.highMinDistance !== null 
+                                      ? ` (${info.details.highMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                            {item.code === "HP8" && (
+                              <>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <Building2 size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailGeneralHospital")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.generalHospitalCount}개 
+                                    {info.details.generalHospitalMinDistance !== null 
+                                      ? ` (${info.details.generalHospitalMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <Activity size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailLocalClinic")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.localClinicCount}개 
+                                    {info.details.localClinicMinDistance !== null 
+                                      ? ` (${info.details.localClinicMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <Stethoscope size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailPharmacy")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.pharmacyCount}개 
+                                    {info.details.pharmacyMinDistance !== null 
+                                      ? ` (${info.details.pharmacyMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                            {item.code === "MT1" && (
+                              <>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <ShoppingCart size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailLargeMart")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.largeMartCount}개 
+                                    {info.details.largeMartMinDistance !== null 
+                                      ? ` (${info.details.largeMartMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <Store size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailSSM")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.ssmCount}개 
+                                    {info.details.ssmMinDistance !== null 
+                                      ? ` (${info.details.ssmMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <Store size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailConvStore")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.convenienceCount}개 
+                                    {info.details.convenienceMinDistance !== null 
+                                      ? ` (${info.details.convenienceMinDistance}m)` 
+                                      : " (-)"}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                            {item.code === "NAT" && (
+                              <>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <Waves size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailWater")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.waterType 
+                                      ? `${t(("infraDetail" + info.details.waterType.charAt(0) + info.details.waterType.slice(1).toLowerCase()) as keyof typeof i18n["ko"])}` 
+                                      : "-"}
+                                    {info.details.waterMinDistance !== null 
+                                      ? ` (${info.details.waterMinDistance}m)` 
+                                      : ""}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-assistive flex items-center gap-1">
+                                    <Trees size={12} className="text-primary shrink-0" />
+                                    {t("infraDetailGreen")}
+                                  </span>
+                                  <span className="font-semibold text-strong">
+                                    {info.details.greenType 
+                                      ? `${t(("infraDetail" + info.details.greenType.charAt(0) + info.details.greenType.slice(1).toLowerCase()) as keyof typeof i18n["ko"])}` 
+                                      : "-"}
+                                    {info.details.greenMinDistance !== null 
+                                      ? ` (${info.details.greenMinDistance}m)` 
+                                      : ""}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 거리 및 개수 통계 */}
+                        <div className="border-t border-normal/50 pt-2.5 flex items-center justify-between text-[11px] text-neutral font-medium">
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="text-[10px] text-assistive font-semibold">{t("infraMinDistance")}</span>
+                            <span className="text-strong font-semibold font-mono truncate">
+                              {info.minDistance !== null 
+                                ? `${info.minDistance}m (${walkTime}분)` 
+                                : "-"}
+                            </span>
+                          </div>
+                          <div className="flex flex-col items-end gap-0.5 shrink-0 ml-2">
+                            <span className="text-[10px] text-assistive font-semibold">{t("infraCount")}</span>
+                            <span className="text-strong font-extrabold font-mono bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px]">
+                              {info.count}개
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    {/* 세부 통계 정보 (details가 존재하는 경우) */}
-                    {info.details && (
-                      <div className="border-t border-normal/30 pt-2.5 space-y-1.5 text-[10px] text-neutral">
-                        {item.code === "SW8" && (
-                          <>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                🚇 {t("infraDetailMetro")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.metroCount}개 
-                                {info.details.metroMinDistance !== null 
-                                  ? ` (${info.details.metroMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                🚄 {t("infraDetailGtx")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.gtxCount}개 
-                                {info.details.gtxMinDistance !== null 
-                                  ? ` (${info.details.gtxMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                🚂 {t("infraDetailRail")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.railCount}개 
-                                {info.details.railMinDistance !== null 
-                                  ? ` (${info.details.railMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                        {item.code === "SC4" && (
-                          <>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                🎒 {t("infraDetailElementary")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.elementaryCount}개 
-                                {info.details.elementaryMinDistance !== null 
-                                  ? ` (${info.details.elementaryMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                ✏️ {t("infraDetailMiddle")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.middleCount}개 
-                                {info.details.middleMinDistance !== null 
-                                  ? ` (${info.details.middleMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                🎓 {t("infraDetailHigh")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.highCount}개 
-                                {info.details.highMinDistance !== null 
-                                  ? ` (${info.details.highMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                        {item.code === "HP8" && (
-                          <>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                🏥 {t("infraDetailGeneralHospital")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.generalHospitalCount}개 
-                                {info.details.generalHospitalMinDistance !== null 
-                                  ? ` (${info.details.generalHospitalMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                🩺 {t("infraDetailLocalClinic")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.localClinicCount}개 
-                                {info.details.localClinicMinDistance !== null 
-                                  ? ` (${info.details.localClinicMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                💊 {t("infraDetailPharmacy")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.pharmacyCount}개 
-                                {info.details.pharmacyMinDistance !== null 
-                                  ? ` (${info.details.pharmacyMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                        {item.code === "MT1" && (
-                          <>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                🛒 {t("infraDetailLargeMart")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.largeMartCount}개 
-                                {info.details.largeMartMinDistance !== null 
-                                  ? ` (${info.details.largeMartMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                🏬 {t("infraDetailSSM")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.ssmCount}개 
-                                {info.details.ssmMinDistance !== null 
-                                  ? ` (${info.details.ssmMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-assistive flex items-center gap-1">
-                                🏪 {t("infraDetailConvStore")}
-                              </span>
-                              <span className="font-semibold text-strong">
-                                {info.details.convenienceCount}개 
-                                {info.details.convenienceMinDistance !== null 
-                                  ? ` (${info.details.convenienceMinDistance}m)` 
-                                  : " (-)"}
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
-
-                    {/* 거리 및 개수 통계 */}
-                    <div className="border-t border-normal/50 pt-2.5 flex items-center justify-between text-[11px] text-neutral font-medium">
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                        <span className="text-[10px] text-assistive font-semibold">{t("infraMinDistance")}</span>
-                        <span className="text-strong font-semibold font-mono truncate">
-                          {info.minDistance !== null 
-                            ? `${info.minDistance}m (${walkTime}분)` 
-                            : "-"}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-end gap-0.5 shrink-0 ml-2">
-                        <span className="text-[10px] text-assistive font-semibold">{t("infraCount")}</span>
-                        <span className="text-strong font-extrabold font-mono bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px]">
-                          {info.count}개
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </SectionCard>
@@ -1119,7 +1204,7 @@ export default function ComplexTab({
 
       {/* 지도 및 입지 분석 섹션 (단지 정보가 존재할 경우 표시) */}
       {detailData.complexInfo && (
-        <SectionCard title="🗺️ 단지 주변 입지 분석 (역세권 및 인프라)">
+        <SectionCard title={<span className="flex items-center gap-2"><Map size={18} className="text-primary" /><span>{t("infraMapAnalysisTitle")}</span></span>}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             {/* 지도 컨테이너 */}
             <div className="lg:col-span-2 space-y-4">
@@ -1253,7 +1338,7 @@ export default function ComplexTab({
       ) : (
         <>
           {/* 1. 월별 거래 트렌드 시계열 */}
-          <SectionCard title={t("monthlyTrendTitle")}>
+          <SectionCard title={<span className="flex items-center gap-2"><TrendingUp size={18} className="text-primary" /><span>{t("monthlyTrendTitle")}</span></span>}>
             {/* 요약 통계 카드 그리드 */}
             {kpiData && (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -1367,7 +1452,7 @@ export default function ComplexTab({
 
           <div className="grid gap-6" style={{ gridTemplateColumns: isNarrow ? '1fr' : 'repeat(2, 1fr)' }}>
             {/* 2. 평수별 통계 (이중 Y축 적용 ComposedChart) */}
-            <SectionCard title={t("areaAnalysisTitle")}>
+            <SectionCard title={<span className="flex items-center gap-2"><Ruler size={18} className="text-primary" /><span>{t("areaAnalysisTitle")}</span></span>}>
               {/* 커스텀 범례 */}
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 {[
@@ -1456,7 +1541,7 @@ export default function ComplexTab({
             </SectionCard>
 
             {/* 3. 층별 분포 (이중 Y축 적용 ComposedChart) */}
-            <SectionCard title={t("floorAnalysisTitle")}>
+            <SectionCard title={<span className="flex items-center gap-2"><Layers size={18} className="text-primary" /><span>{t("floorAnalysisTitle")}</span></span>}>
               {/* 커스텀 범례 */}
               <div className="flex flex-wrap items-center gap-4 mb-4">
                 {[
@@ -1546,7 +1631,7 @@ export default function ComplexTab({
           </div>
 
           {/* 4. 최근 실거래 목록 */}
-          <SectionCard title={t("recentTxTitle")}>
+          <SectionCard title={<span className="flex items-center gap-2"><Calendar size={18} className="text-primary" /><span>{t("recentTxTitle")}</span></span>}>
             {groupedTx.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {groupedTx.map((group) => (
@@ -1597,12 +1682,13 @@ export default function ComplexTab({
           onClick={() => setShowInfoModal(false)}
         >
           <div 
-            className="bg-elevated border border-normal rounded-2xl shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 text-left"
+            className="bg-elevated border border-normal rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 text-left"
             onClick={(e) => e.stopPropagation()}
           >
             {/* 헤더 */}
             <div className="flex items-center justify-between border-b border-normal px-6 py-4 shrink-0">
               <h3 className="text-base font-bold text-strong flex items-center gap-2">
+                <BarChart3 size={18} className="text-primary" />
                 {t("infraModalTitle")}
               </h3>
               <button 
@@ -1614,8 +1700,8 @@ export default function ComplexTab({
             </div>
             
             {/* 본문 */}
-            <div className="p-6 overflow-y-auto space-y-5 text-xs text-neutral leading-relaxed">
-              <p className="text-[11px] bg-alternative/60 p-3 rounded-lg border border-normal">
+            <div className="p-6 overflow-y-auto space-y-5 text-sm text-neutral leading-relaxed">
+              <p className="text-xs bg-alternative/60 p-3 rounded-lg border border-normal">
                 {t("infraModalIntro")}
               </p>
 
@@ -1625,7 +1711,7 @@ export default function ComplexTab({
                   {t("infraModalFormulaTitle")}
                 </h4>
                 <p>{t("infraModalFormulaDesc")}</p>
-                <div className="bg-normal/50 p-2.5 rounded font-mono text-[10px] text-primary text-center font-bold border border-normal/50">
+                <div className="bg-normal/50 p-2.5 rounded font-mono text-xs text-primary text-center font-bold border border-normal/50">
                   {t("infraModalFormulaMath")}
                 </div>
               </div>
@@ -1636,22 +1722,21 @@ export default function ComplexTab({
                   {t("infraModalRadiusTitle")}
                 </h4>
                 <p>{t("infraModalRadiusDesc")}</p>
-                <ul className="bg-alternative/40 p-3 rounded-lg border border-normal space-y-1.5 font-medium">
-                  <li className="flex items-center justify-between">
-                    <span className="text-strong">{t("infraCategorySubway").split(" ")[0]}</span>
-                    <span className="text-[10px] font-mono">{t("infraModalSubwayDesc")}</span>
+                <ul className="bg-alternative/40 p-3 rounded-lg border border-normal space-y-2 font-medium">
+                  <li className="text-xs font-mono text-neutral leading-relaxed">
+                    • {t("infraModalSubwayDesc")}
                   </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-strong">{t("infraCategorySchool").split(" ")[0]}</span>
-                    <span className="text-[10px] font-mono">{t("infraModalSchoolDesc")}</span>
+                  <li className="text-xs font-mono text-neutral leading-relaxed">
+                    • {t("infraModalSchoolDesc")}
                   </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-strong">{t("infraCategoryHospital").split(" ")[0]}</span>
-                    <span className="text-[10px] font-mono">{t("infraModalHospitalDesc")}</span>
+                  <li className="text-xs font-mono text-neutral leading-relaxed">
+                    • {t("infraModalHospitalDesc")}
                   </li>
-                  <li className="flex items-center justify-between">
-                    <span className="text-strong">{t("infraCategoryMart").split(" ")[0]}</span>
-                    <span className="text-[10px] font-mono">{t("infraModalMartDesc")}</span>
+                  <li className="text-xs font-mono text-neutral leading-relaxed">
+                    • {t("infraModalMartDesc")}
+                  </li>
+                  <li className="text-xs font-mono text-neutral leading-relaxed">
+                    • {t("infraModalNaturalDesc")}
                   </li>
                 </ul>
               </div>
@@ -1662,7 +1747,7 @@ export default function ComplexTab({
                   {t("infraModalWeightTitle")}
                 </h4>
                 <p>{t("infraModalWeightDesc")}</p>
-                <div className="bg-normal/50 p-2.5 rounded font-mono text-[10px] text-strong text-center font-bold border border-normal/50">
+                <div className="bg-normal/50 p-2.5 rounded font-mono text-xs text-strong text-center font-bold border border-normal/50">
                   {t("infraModalWeightList")}
                 </div>
               </div>
@@ -1672,7 +1757,7 @@ export default function ComplexTab({
             <div className="border-t border-normal px-6 py-4 flex justify-end shrink-0">
               <button
                 onClick={() => setShowInfoModal(false)}
-                className="px-4 py-2 bg-primary text-white font-bold rounded-lg text-xs hover:opacity-90 transition"
+                className="px-4 py-2 bg-primary text-white font-bold rounded-lg text-sm hover:opacity-90 transition"
               >
                 {t("close")}
               </button>
