@@ -591,16 +591,14 @@ export function DashboardPage({
           )}
 
           {mapLoaded && !mapError && (
-            <div className="absolute top-4 left-4 z-10 w-[280px] max-w-[calc(100vw-32px)]">
-              <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-lg border border-normal rounded-xl p-3 shadow-lg space-y-2">
-                <span className="text-[10px] font-black tracking-wide text-neutral block mb-1">지역 검색 이동</span>
-                <RegionSearchInput
-                  value={searchRegionName}
-                  onChange={setSearchRegionName}
-                  onSelect={handleSearchSelect}
-                  placeholder={t.regionPlaceholder}
-                />
-              </div>
+            <div className="absolute top-4 left-4 z-10 w-[240px] md:w-[280px] max-w-[calc(100vw-32px)]">
+              <RegionSearchInput
+                value={searchRegionName}
+                onChange={setSearchRegionName}
+                onSelect={handleSearchSelect}
+                placeholder={t.regionPlaceholder}
+                className="w-full rounded-lg border border-normal bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm px-2.5 py-1.5 text-xs text-strong focus:border-primary outline-none shadow-lg"
+              />
             </div>
           )}
 

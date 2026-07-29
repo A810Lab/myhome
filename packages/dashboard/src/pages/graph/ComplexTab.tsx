@@ -87,7 +87,7 @@ const i18n = {
     infraModalFormulaMath: "부문 점수 = 최단거리 점수",
     infraModalRadiusTitle: "2. 시설별 특화 반경 및 거리 감점 기준",
     infraModalRadiusDesc: "생활 밀착도에 따른 전용 반경 내에서 가까울수록 고득점을 획득합니다 (반경 초과 시 0점).",
-    infraModalSubwayDesc: "역세권 (반경 1500m): 250m 이내 100점, 500m 이내 85점, 1000m 이내 65점, 1500m 이내 40점",
+    infraModalSubwayDesc: "역세권 (반경 1000m): 250m 이내 100점, 500m 이내 85점, 1000m 이내 60점",
     infraModalSchoolDesc: "학교 (반경 500m): 150m 이내 100점, 300m 이내 85점, 500m 이내 60점",
     infraModalHospitalDesc: "병원 (반경 1000m): 300m 이내 100점, 500m 이내 80점, 1000m 이내 50점",
     infraModalMartDesc: "대형마트 (반경 1500m): 500m 이내 100점, 1000m 이내 80점, 1500m 이내 50점",
@@ -168,7 +168,7 @@ const i18n = {
     infraModalFormulaMath: "Category Score = Distance Score",
     infraModalRadiusTitle: "2. Specific Radius & Distance Penalty",
     infraModalRadiusDesc: "Points decrease as distance increases within the specialized radius (0 points if outside).",
-    infraModalSubwayDesc: "Station Area (Radius 1500m): <=250m 100pts, <=500m 85pts, <=1000m 65pts, <=1500m 40pts",
+    infraModalSubwayDesc: "Station Area (Radius 1000m): <=250m 100pts, <=500m 85pts, <=1000m 60pts",
     infraModalSchoolDesc: "School (Radius 500m): <=150m 100pts, <=300m 85pts, <=500m 60pts",
     infraModalHospitalDesc: "Hospital (Radius 1000m): <=300m 100pts, <=500m 80pts, <=1000m 50pts",
     infraModalMartDesc: "Mart (Radius 1500m): <=500m 100pts, <=1000m 80pts, <=1500m 50pts",
@@ -452,16 +452,16 @@ export default function ComplexTab({
     if (lat === null || lng === null) return;
 
     const container = mapContainerRef.current;
+    const complexPosition = new window.kakao.maps.LatLng(lat, lng);
     const options = {
-      center: new window.kakao.maps.LatLng(lat, lng),
-      level: 5 // 반경 2km가 원활히 보이도록 레벨 5 설정
+      center: complexPosition,
+      level: 5 // 반경 1km가 원활히 보이도록 레벨 5 설정
     };
 
     const map = new window.kakao.maps.Map(container, options);
     setMapInstance(map);
 
     // 1. 단지 마커 표시
-    const complexPosition = new window.kakao.maps.LatLng(lat, lng);
     const complexMarker = new window.kakao.maps.Marker({
       position: complexPosition,
       map: map,
@@ -475,11 +475,10 @@ export default function ComplexTab({
     });
     complexOverlay.setMap(map);
 
-    // 2. 반경 원 500m, 1km, 2km 표시
+    // 2. 반경 원 500m, 1km 표시
     const circleRadii = [
       { r: 500, color: '#3b82f6', opacity: 0.08 },
-      { r: 1000, color: '#10b981', opacity: 0.05 },
-      { r: 2000, color: '#f59e0b', opacity: 0.02 }
+      { r: 1000, color: '#10b981', opacity: 0.05 }
     ];
 
     const circleInstances = circleRadii.map((c) => {
@@ -1171,10 +1170,10 @@ export default function ComplexTab({
               <div>
                 <h3 className="text-sm font-bold text-strong flex items-center gap-1.5 mb-2">
                   <Train size={16} className="text-primary" />
-                  <span>인근 역세권 (반경 2km 이내)</span>
+                  <span>인근 역세권 (반경 1km 이내)</span>
                 </h3>
                 <p className="text-xs text-neutral mb-3 leading-relaxed">
-                  단지 기준 직선 반경 2km 이내에 위치한 철도/지하철역 목록입니다. 도보/차량 시간은 직선거리 기준 추정값입니다.
+                  단지 기준 직선 반경 1km 이내에 위치한 철도/지하철역 목록입니다. 도보/차량 시간은 직선거리 기준 추정값입니다.
                 </p>
 
                 {detailData.subways && detailData.subways.length > 0 ? (
@@ -1212,7 +1211,7 @@ export default function ComplexTab({
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 bg-normal/20 border border-normal border-dashed rounded-xl text-neutral">
                     <Train size={32} className="mb-2 opacity-20 text-warn" />
-                    <p className="text-xs font-semibold text-warn">2km 이내에 철도/지하철역이 없습니다.</p>
+                    <p className="text-xs font-semibold text-warn">1km 이내에 철도/지하철역이 없습니다.</p>
                   </div>
                 )}
               </div>

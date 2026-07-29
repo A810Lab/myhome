@@ -685,15 +685,26 @@ export async function findSubwayStationsNearCoords(
     if (res.ok) {
       const body = await res.json();
       if (body.documents) {
-        const result: NearbySubwayStation[] = body.documents.map((doc: any) => ({
-          name: doc.place_name,
-          distanceM: parseInt(doc.distance) || 0,
-          lat: parseFloat(doc.y),
-          lng: parseFloat(doc.x),
-        }));
-        
+        const stationsMap = new Map<string, NearbySubwayStation>();
+
+        for (const doc of body.documents) {
+          const rawName = doc.place_name;
+          const match = rawName.match(/^(.+?역)/);
+          const name = match ? match[1] : rawName.trim();
+          
+          const distanceM = parseInt(doc.distance) || 0;
+          const lat = parseFloat(doc.y);
+          const lng = parseFloat(doc.x);
+
+          const existing = stationsMap.get(name);
+          if (!existing || distanceM < existing.distanceM) {
+            stationsMap.set(name, { name, distanceM, lat, lng });
+          }
+        }
+
+        const result = Array.from(stationsMap.values());
         nearbySubwaysCache.set(cacheKey, result);
-        console.log(`[Geocoding] 주변 지하철역 캐시 저장: ${cacheKey} (${result.length}개 발견)`);
+        console.log(`[Geocoding] 주변 지하철역 캐시 저장: ${cacheKey} (중복 제거 후 ${result.length}개 발견, 원본 ${body.documents.length}개)`);
         return result;
       }
     }
@@ -725,11 +736,10 @@ function calculateCategoryScore(code: string, minDistance: number | null, count:
   const d = minDistance;
 
   if (code === "SW8") {
-    // 지하철역 (반경 1500m) - 최고 배점
+    // 지하철역 (반경 1000m) - 최고 배점
     if (d <= 250) distanceScore = 100;
     else if (d <= 500) distanceScore = 85;
-    else if (d <= 1000) distanceScore = 65;
-    else if (d <= 1500) distanceScore = 40;
+    else if (d <= 1000) distanceScore = 60;
     else distanceScore = 0;
   } else if (code === "SC4") {
     // 학교 (반경 500m)
@@ -778,7 +788,7 @@ function calculateCategoryScore(code: string, minDistance: number | null, count:
 function generateMockInfraRating(complexName: string) {
   const hash = simpleStringHash(complexName);
   const categoryConfigs = [
-    { code: "SW8", name: "역세권", weight: 1.5, radius: 1500, baseDist: 150, countMax: 4 },
+    { code: "SW8", name: "역세권", weight: 1.5, radius: 1000, baseDist: 150, countMax: 4 },
     { code: "SC4", name: "학교", weight: 1.0, radius: 500, baseDist: 100, countMax: 3 },
     { code: "HP8", name: "병원", weight: 0.8, radius: 1000, baseDist: 200, countMax: 5 },
     { code: "MT1", name: "대형마트", weight: 0.7, radius: 1500, baseDist: 400, countMax: 2 }
@@ -978,7 +988,7 @@ export async function getComplexInfraRating(
   }
 
   const categoryConfigs = [
-    { code: "SW8", name: "역세권", weight: 1.5, radius: 1500 },
+    { code: "SW8", name: "역세권", weight: 1.5, radius: 1000 },
     { code: "SC4", name: "학교", weight: 1.0, radius: 500 },
     { code: "HP8", name: "병원", weight: 0.8, radius: 1000 },
     { code: "MT1", name: "대형마트", weight: 0.7, radius: 1500 }
@@ -1007,43 +1017,64 @@ export async function getComplexInfraRating(
           const docs = body.documents;
           
           if (config.code === "SW8") {
-            const gtxDocs = docs.filter((doc: any) => {
+            const getUniqueStationName = (doc: any) => {
+              const rawName = doc.place_name || "";
+              const match = rawName.match(/^(.+?역)/);
+              return match ? match[1] : rawName.trim();
+            };
+
+            const gtxUnique = new Map<string, number>();
+            const railUnique = new Map<string, number>();
+            const metroUnique = new Map<string, number>();
+
+            docs.forEach((doc: any) => {
               const cat = doc.category_name || "";
               const name = doc.place_name || "";
-              return cat.includes("GTX") || name.includes("GTX");
-            });
-            const gtxCount = gtxDocs.length;
-            const gtxMinDistance = gtxDocs.length > 0 ? (parseInt(gtxDocs[0].distance) || 0) : null;
-            
-            const railDocs = docs.filter((doc: any) => {
-              const cat = doc.category_name || "";
-              const name = doc.place_name || "";
-              if (cat.includes("GTX") || name.includes("GTX")) return false;
-              return cat.includes("KTX") || cat.includes("SRT") || cat.includes("ITX") || 
-                     name.includes("KTX") || name.includes("SRT") || name.includes("ITX") || 
-                     name.includes("기차역") || name.includes("철도역") || 
-                     name.endsWith("철도") || name.includes("일반철도");
-            });
-            const railCount = railDocs.length;
-            const railMinDistance = railDocs.length > 0 ? (parseInt(railDocs[0].distance) || 0) : null;
-            
-            const metroDocs = docs.filter((doc: any) => {
-              const cat = doc.category_name || "";
-              const name = doc.place_name || "";
+              const distanceM = parseInt(doc.distance) || 0;
+              const uniqueName = getUniqueStationName(doc);
+
               const isGtx = cat.includes("GTX") || name.includes("GTX");
+              if (isGtx) {
+                if (!gtxUnique.has(uniqueName)) {
+                  gtxUnique.set(uniqueName, distanceM);
+                }
+                return;
+              }
+
               const isRail = cat.includes("KTX") || cat.includes("SRT") || cat.includes("ITX") || 
                              name.includes("KTX") || name.includes("SRT") || name.includes("ITX") || 
                              name.includes("기차역") || name.includes("철도역") || 
                              name.endsWith("철도") || name.includes("일반철도");
-              return !isGtx && !isRail;
+              if (isRail) {
+                if (!railUnique.has(uniqueName)) {
+                  railUnique.set(uniqueName, distanceM);
+                }
+                return;
+              }
+
+              if (!metroUnique.has(uniqueName)) {
+                metroUnique.set(uniqueName, distanceM);
+              }
             });
-            const metroCount = metroDocs.length;
-            const metroMinDistance = metroDocs.length > 0 ? (parseInt(metroDocs[0].distance) || 0) : null;
-            
-            count = docs.length;
+
+            const gtxCount = gtxUnique.size;
+            const gtxMinDistance = gtxCount > 0 ? Math.min(...Array.from(gtxUnique.values())) : null;
+
+            const railCount = railUnique.size;
+            const railMinDistance = railCount > 0 ? Math.min(...Array.from(railUnique.values())) : null;
+
+            const metroCount = metroUnique.size;
+            const metroMinDistance = metroCount > 0 ? Math.min(...Array.from(metroUnique.values())) : null;
+
+            const allUniqueNames = new Set([
+              ...gtxUnique.keys(),
+              ...railUnique.keys(),
+              ...metroUnique.keys()
+            ]);
+            count = allUniqueNames.size;
             minDistance = docs.length > 0 ? (parseInt(docs[0].distance) || 0) : null;
             score = calculateCategoryScore(config.code, minDistance, count);
-            
+
             details = {
               metroCount,
               metroMinDistance,

@@ -348,9 +348,9 @@ export function createGraphRouter(): Router {
           }
         }
 
-        // 좌표가 있는 경우 주변 지하철역 검색 (반경 2km)
+        // 좌표가 있는 경우 주변 지하철역 검색 (반경 1km)
         if (complexInfo.lat !== null && complexInfo.lng !== null) {
-          subways = await findSubwayStationsNearCoords(complexInfo.lat, complexInfo.lng, 2000);
+          subways = await findSubwayStationsNearCoords(complexInfo.lat, complexInfo.lng, 1000);
         }
       }
 

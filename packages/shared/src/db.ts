@@ -383,6 +383,33 @@ export function upsertAreaMapping(
 }
 
 /**
+ * 전용면적 대비 분양면적 매핑 정보 조회 (캐시 검사용)
+ */
+export function getAreaMapping(
+  complexId: string,
+  areaM2: number
+): { supplyAreaM2: number; source: string } | null {
+  const db = getDb();
+  try {
+    const stmt = db.prepare(`
+      SELECT supply_area_m2 AS supplyAreaM2, source
+      FROM complex_area_mappings
+      WHERE complex_id = ? AND ABS(area_m2 - ?) < 0.01
+    `);
+    const row = stmt.get(complexId, areaM2) as any;
+    if (row) {
+      return {
+        supplyAreaM2: Number(row.supplyAreaM2),
+        source: String(row.source),
+      };
+    }
+  } catch (err) {
+    console.error("[SQLiteDB] getAreaMapping error", err);
+  }
+  return null;
+}
+
+/**
  * 검색 단지명 유연 해석
  */
 function resolveComplexName(db: DatabaseSync, complexName: string, lawdCode?: string): string {

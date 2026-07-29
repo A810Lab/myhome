@@ -1,5 +1,5 @@
 import { parseRealEstateXml } from "./xmlParser.js";
-import { upsertAreaMapping } from "./db.js";
+import { upsertAreaMapping, getAreaMapping } from "./db.js";
 
 // 카카오 로컬 API를 이용해 주소의 10자리 법정동 코드(bCode)를 가져오는 헬퍼
 async function getBCode(addressName: string): Promise<string | null> {
@@ -52,6 +52,12 @@ export async function syncSupplyArea(params: {
 }): Promise<number> {
   const { complexId, complexName, lawdCode, dongName, jibun, areaM2, regionDisplayName } = params;
 
+  // 0. 캐시 확인: 이미 매핑 정보가 적재되어 있다면 해당 분양면적 반환
+  const cached = getAreaMapping(complexId, areaM2);
+  if (cached) {
+    return cached.supplyAreaM2;
+  }
+
   // 1. 카카오 API를 활용해 법정동 코드 조회 시도
   let bCode: string | null = null;
   if (dongName && jibun) {
@@ -73,7 +79,7 @@ export async function syncSupplyArea(params: {
   const { bun, ji } = parseJibun(jibun || "");
 
   // 2.5 건축물대장 표제부 API 호출 및 메타정보 갱신 (세대수, 주차대수 등)
-  const titleUrl = `http://apis.data.go.kr/1613000/BldrgstService_v2/getBrTitleInfo?serviceKey=${apiKey}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=10&pageNo=1`;
+  const titleUrl = `http://apis.data.go.kr/1613000/BldRgstService_v2/getBrTitleInfo?serviceKey=${apiKey}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=10&pageNo=1`;
   try {
     const titleRes = await fetch(titleUrl, { signal: AbortSignal.timeout(10000) });
     if (titleRes.ok) {
@@ -107,7 +113,7 @@ export async function syncSupplyArea(params: {
   }
 
   // 3. 건축물대장 전유공용면적 API 호출
-  const url = `http://apis.data.go.kr/1613000/BldrgstService_v2/getBrExposPubuseAreaInfo?serviceKey=${apiKey}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=1000&pageNo=1`;
+  const url = `http://apis.data.go.kr/1613000/BldRgstService_v2/getBrExposPubuseAreaInfo?serviceKey=${apiKey}&sigunguCd=${sigunguCd}&bjdongCd=${bjdongCd}&bun=${bun}&ji=${ji}&numOfRows=1000&pageNo=1`;
 
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
@@ -161,7 +167,9 @@ export async function syncSupplyArea(params: {
       }
     }
   } catch (err: any) {
-    console.warn(`[AreaMapper] 건축물대장 API 연동 실패 (${complexName}, ${areaM2}㎡):`, err.message);
+    const isServerErr = err.message?.includes("500") || err.message?.includes("Unexpected errors");
+    const errMsg = isServerErr ? `${err.message} (공공데이터포털 서버 장애 - 폴백 적용)` : err.message;
+    console.warn(`[AreaMapper] 건축물대장 API 연동 실패 (${complexName}, ${areaM2}㎡):`, errMsg);
   }
 
   // API 연동에 실패하거나 전용률이 비정상적인 경우 폴백 적용
