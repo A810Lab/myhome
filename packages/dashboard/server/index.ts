@@ -7,6 +7,7 @@ import { createAdminRouter } from "./routes-admin.js";
 import { startScheduler, stopScheduler } from "./scheduler.js";
 import { initDb, closeGraphDb, cleanExpiredSessions } from "@myhome/shared";
 import { createAuthRouter, authMiddleware, adminRequired } from "./authRoutes.js";
+import { globalErrorHandler } from "./middlewares/errorHandler.js";
 
 import { join, dirname } from "node:path";
 import { Config, validateRequiredConfig } from "./config.js";
@@ -53,11 +54,23 @@ const yamlPort = findAndLoadYamlPort();
 const port = Number(Config.PORT ?? yamlPort ?? "4174");
 
 app.use(express.json());
+
+// --- Legacy API Routes (v0 / backward compatibility) ---
 app.use("/api", authMiddleware);
 app.use("/api/auth", createAuthRouter());
 app.use("/api", createRouter());
 app.use("/api/graph", createGraphRouter());
 app.use("/api/admin", adminRequired, createAdminRouter());
+
+// --- Versioned API Routes (v1) ---
+app.use("/api/v1", authMiddleware);
+app.use("/api/v1/auth", createAuthRouter());
+app.use("/api/v1", createRouter());
+app.use("/api/v1/graph", createGraphRouter());
+app.use("/api/v1/admin", adminRequired, createAdminRouter());
+
+// --- Global Error Handling Middleware ---
+app.use(globalErrorHandler);
 
 // SPA 정적 파일 서빙 추가
 const fileDir = dirname(new URL(import.meta.url).pathname).replace(/^\/([a-zA-Z]:)/, '$1');

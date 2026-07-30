@@ -10,7 +10,7 @@ import { getApartmentList, getApartmentPrices } from "./mcpClient.js";
 import { isKakaoConfigured, searchAddresses } from "./addressSearch.js";
 import { getMonthsInRange, normalizeTransaction } from "./transactions.js";
 import type { ComparisonCriteria, RuleInput, SystemConfig } from "./types.js";
-import { upsertTransactionBatch, makeGraphDedupeKey, getCachedApartments, saveCachedApartments, searchDbRegions, getLocalTransactionsCount, getLocalApartmentPrices, getUserSettings, saveUserSettings, insertActivityLog, getActivityLogs, getActivityStats, resetGeocodeFailures, updateComplexCoords, resetComplexCoords } from "@myhome/shared";
+import { upsertTransactionBatch, makeGraphDedupeKey, getCachedApartments, saveCachedApartments, searchDbRegions, getLocalTransactionsCount, getLocalApartmentPrices, getUserSettings, saveUserSettings, insertActivityLog, getActivityLogs, getActivityStats, resetGeocodeFailures, updateComplexCoords, resetComplexCoords, mapLimit } from "@myhome/shared";
 export type GraphFilter = {
   /** 기존 단일 법정동 코드 */
   lawdCode?: string;
@@ -20,6 +20,7 @@ export type GraphFilter = {
 import type { BatchUpsertItem } from "@myhome/shared";
 import { adminRequired } from "./authRoutes.js";
 import { graphCache } from "./cache.js";
+import { getAuthenticatedEmail } from "./utils/authUtils.js";
 
 
 const comparisonValues: ComparisonCriteria[] = ["none", "parking", "large_complex", "transit", "newer", "livability"];
@@ -99,23 +100,25 @@ export function createRouter() {
     }
   });
 
+import { maskSecret, getUpdatedSecret } from "./utils/maskUtils.js";
+
   router.get("/system-config", adminRequired, async (_req, res, next) => {
     try {
       const config = await getSystemConfig();
       res.json({
-        telegramBotToken: Config.TELEGRAM_BOT_TOKEN ? "●●●●●●●●" : "",
-        telegramChatId: Config.TELEGRAM_CHAT_ID ? "●●●●●●●●" : "",
-        kakaoRestApiKey: Config.KAKAO_REST_API_KEY ? "●●●●●●●●" : "",
-        jusoConfmKey: Config.JUSO_CONFM_KEY ? "●●●●●●●●" : "",
-        dataGoKrApiKey: Config.DATA_GO_KR_API_KEY ? "●●●●●●●●" : "",
-        kakaoJavascriptKey: Config.KAKAO_JAVASCRIPT_KEY ? "●●●●●●●●" : "",
-        kakaoNativeAppKey: Config.KAKAO_NATIVE_APP_KEY ? "●●●●●●●●" : "",
+        telegramBotToken: maskSecret(Config.TELEGRAM_BOT_TOKEN),
+        telegramChatId: maskSecret(Config.TELEGRAM_CHAT_ID),
+        kakaoRestApiKey: maskSecret(Config.KAKAO_REST_API_KEY),
+        jusoConfmKey: maskSecret(Config.JUSO_CONFM_KEY),
+        dataGoKrApiKey: maskSecret(Config.DATA_GO_KR_API_KEY),
+        kakaoJavascriptKey: maskSecret(Config.KAKAO_JAVASCRIPT_KEY),
+        kakaoNativeAppKey: maskSecret(Config.KAKAO_NATIVE_APP_KEY),
         googleClientId: Config.GOOGLE_CLIENT_ID || "",
-        googleClientSecret: Config.GOOGLE_CLIENT_SECRET ? "●●●●●●●●" : "",
+        googleClientSecret: maskSecret(Config.GOOGLE_CLIENT_SECRET),
         googleRedirectUri: Config.GOOGLE_REDIRECT_URI || "",
         allowedEmails: Config.ALLOWED_EMAILS || "",
         adminEmails: Config.ADMIN_EMAILS || "",
-        geminiApiKey: Config.GEMINI_API_KEY ? "●●●●●●●●" : ""
+        geminiApiKey: maskSecret(Config.GEMINI_API_KEY)
       });
     } catch (err) {
       next(err);
@@ -127,33 +130,34 @@ export function createRouter() {
       const body = req.body;
       const update: SystemConfig = {};
 
-      if (body.telegramBotToken !== undefined && body.telegramBotToken !== "●●●●●●●●") {
-        update.telegramBotToken = body.telegramBotToken;
-      }
-      if (body.telegramChatId !== undefined && body.telegramChatId !== "●●●●●●●●") {
-        update.telegramChatId = body.telegramChatId;
-      }
-      if (body.kakaoRestApiKey !== undefined && body.kakaoRestApiKey !== "●●●●●●●●") {
-        update.kakaoRestApiKey = body.kakaoRestApiKey;
-      }
-      if (body.jusoConfmKey !== undefined && body.jusoConfmKey !== "●●●●●●●●") {
-        update.jusoConfmKey = body.jusoConfmKey;
-      }
-      if (body.dataGoKrApiKey !== undefined && body.dataGoKrApiKey !== "●●●●●●●●") {
-        update.dataGoKrApiKey = body.dataGoKrApiKey;
-      }
-      if (body.kakaoJavascriptKey !== undefined && body.kakaoJavascriptKey !== "●●●●●●●●") {
-        update.kakaoJavascriptKey = body.kakaoJavascriptKey;
-      }
-      if (body.kakaoNativeAppKey !== undefined && body.kakaoNativeAppKey !== "●●●●●●●●") {
-        update.kakaoNativeAppKey = body.kakaoNativeAppKey;
-      }
+      const telegramBotToken = getUpdatedSecret(body.telegramBotToken);
+      if (telegramBotToken !== undefined) update.telegramBotToken = telegramBotToken;
+
+      const telegramChatId = getUpdatedSecret(body.telegramChatId);
+      if (telegramChatId !== undefined) update.telegramChatId = telegramChatId;
+
+      const kakaoRestApiKey = getUpdatedSecret(body.kakaoRestApiKey);
+      if (kakaoRestApiKey !== undefined) update.kakaoRestApiKey = kakaoRestApiKey;
+
+      const jusoConfmKey = getUpdatedSecret(body.jusoConfmKey);
+      if (jusoConfmKey !== undefined) update.jusoConfmKey = jusoConfmKey;
+
+      const dataGoKrApiKey = getUpdatedSecret(body.dataGoKrApiKey);
+      if (dataGoKrApiKey !== undefined) update.dataGoKrApiKey = dataGoKrApiKey;
+
+      const kakaoJavascriptKey = getUpdatedSecret(body.kakaoJavascriptKey);
+      if (kakaoJavascriptKey !== undefined) update.kakaoJavascriptKey = kakaoJavascriptKey;
+
+      const kakaoNativeAppKey = getUpdatedSecret(body.kakaoNativeAppKey);
+      if (kakaoNativeAppKey !== undefined) update.kakaoNativeAppKey = kakaoNativeAppKey;
+
       if (body.googleClientId !== undefined) {
         update.googleClientId = body.googleClientId;
       }
-      if (body.googleClientSecret !== undefined && body.googleClientSecret !== "●●●●●●●●") {
-        update.googleClientSecret = body.googleClientSecret;
-      }
+
+      const googleClientSecret = getUpdatedSecret(body.googleClientSecret);
+      if (googleClientSecret !== undefined) update.googleClientSecret = googleClientSecret;
+
       if (body.googleRedirectUri !== undefined) {
         update.googleRedirectUri = body.googleRedirectUri;
       }
@@ -163,9 +167,9 @@ export function createRouter() {
       if (body.adminEmails !== undefined) {
         update.adminEmails = body.adminEmails;
       }
-      if (body.geminiApiKey !== undefined && body.geminiApiKey !== "●●●●●●●●") {
-        update.geminiApiKey = body.geminiApiKey;
-      }
+
+      const geminiApiKey = getUpdatedSecret(body.geminiApiKey);
+      if (geminiApiKey !== undefined) update.geminiApiKey = geminiApiKey;
 
       await saveSystemConfig(update);
       res.json({ ok: true });
@@ -414,10 +418,7 @@ export function createRouter() {
         return res.status(400).json({ error: 'start_ymd and end_ymd must be in YYYYMM format' });
       }
 
-      const months = getMonthsInRange(startMonth, endMonth);
-      const results = await Promise.all(
-        months.map((m) => getApartmentPrices(lawdCode, m))
-      );
+      const results = await mapLimit(months, 3, (m) => getApartmentPrices(lawdCode, m));
       const flattened = results.map((r) => r.transactions).flat();
       
       res.json({ ok: true, data: flattened });
@@ -428,14 +429,8 @@ export function createRouter() {
 
   router.get("/rules", async (req, res, next) => {
     try {
-      let email = req.user?.email;
-if (!email) {
-  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
-    email = "bootstrap-admin@myhome.local";
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-}
+      const email = getAuthenticatedEmail(req, res);
+      if (!email) return;
       const state = await readStateForUser(email);
       res.json(state.rules);
     } catch (error) {
@@ -445,14 +440,8 @@ if (!email) {
 
   router.post("/rules", validateBody(ruleSchema), async (req, res, next) => {
     try {
-      let email = req.user?.email;
-if (!email) {
-  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
-    email = "bootstrap-admin@myhome.local";
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-}
+      const email = getAuthenticatedEmail(req, res);
+      if (!email) return;
       const input = ruleSchema.parse(req.body) satisfies RuleInput;
       const rule = await upsertRule(input, undefined, email);
       res.status(201).json(rule);
@@ -463,14 +452,8 @@ if (!email) {
 
   router.patch("/rules/:id", validateBody(ruleUpdateSchema), async (req, res, next) => {
     try {
-      let email = req.user?.email;
-if (!email) {
-  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
-    email = "bootstrap-admin@myhome.local";
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-}
+      const email = getAuthenticatedEmail(req, res);
+      if (!email) return;
       const parsedBody = ruleUpdateSchema.parse(req.body);
       const rule = await updateRulePatch(req.params.id as string, parsedBody, email);
       if (!rule) {
@@ -485,14 +468,8 @@ if (!email) {
 
   router.delete("/rules/:id", async (req, res, next) => {
     try {
-      let email = req.user?.email;
-if (!email) {
-  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
-    email = "bootstrap-admin@myhome.local";
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-}
+      const email = getAuthenticatedEmail(req, res);
+      if (!email) return;
       const deleted = await deleteRule(req.params.id, email);
       if (!deleted) {
         res.status(404).json({ error: "Rule not found" });
@@ -506,14 +483,8 @@ if (!email) {
 
   router.post("/rules/:id/run", async (req, res, next) => {
     try {
-      let email = req.user?.email;
-if (!email) {
-  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
-    email = "bootstrap-admin@myhome.local";
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-}
+      const email = getAuthenticatedEmail(req, res);
+      if (!email) return;
       const state = await readStateForUser(email);
       const rule = state.rules.find((item) => item.id === req.params.id);
       if (!rule) {
@@ -530,14 +501,8 @@ if (!email) {
 
   router.get("/check-runs", async (req, res, next) => {
     try {
-      let email = req.user?.email;
-if (!email) {
-  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
-    email = "bootstrap-admin@myhome.local";
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-}
+      const email = getAuthenticatedEmail(req, res);
+      if (!email) return;
       const state = await readStateForUser(email);
       res.json(state.checkRuns);
     } catch (error) {
@@ -547,14 +512,8 @@ if (!email) {
 
   router.delete("/check-runs/:id", async (req, res, next) => {
     try {
-      let email = req.user?.email;
-if (!email) {
-  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
-    email = "bootstrap-admin@myhome.local";
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-}
+      const email = getAuthenticatedEmail(req, res);
+      if (!email) return;
       const deleted = await deleteCheckRun(req.params.id, email);
       if (!deleted) {
         res.status(404).json({ error: "Check run not found" });
@@ -568,14 +527,8 @@ if (!email) {
 
   router.get("/notifications", async (req, res, next) => {
     try {
-      let email = req.user?.email;
-if (!email) {
-  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
-    email = "bootstrap-admin@myhome.local";
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-}
+      const email = getAuthenticatedEmail(req, res);
+      if (!email) return;
       const state = await readStateForUser(email);
       res.json(state.notifications);
     } catch (error) {
@@ -633,19 +586,13 @@ if (!email) {
 
   router.get("/user-config", async (req, res, next) => {
     try {
-      let email = req.user?.email;
-if (!email) {
-  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
-    email = "bootstrap-admin@myhome.local";
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-}
+      const email = getAuthenticatedEmail(req, res);
+      if (!email) return;
       const settings = getUserSettings(email);
       res.json({
-        telegramBotToken: settings?.telegramBotToken ? "●●●●●●●●" : "",
-        telegramChatId: settings?.telegramChatId ? "●●●●●●●●" : "",
-        kakaoRestApiKey: settings?.kakaoRestApiKey ? "●●●●●●●●" : "",
+        telegramBotToken: maskSecret(settings?.telegramBotToken),
+        telegramChatId: maskSecret(settings?.telegramChatId),
+        kakaoRestApiKey: maskSecret(settings?.kakaoRestApiKey),
       });
     } catch (error) {
       next(error);
@@ -654,41 +601,25 @@ if (!email) {
 
   router.post("/user-config", validateBody(userConfigUpdateSchema), async (req, res, next) => {
     try {
-      let email = req.user?.email;
-if (!email) {
-  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
-    email = "bootstrap-admin@myhome.local";
-  } else {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-}
+      const email = getAuthenticatedEmail(req, res);
+      if (!email) return;
       const body = req.body;
       const update: { telegramBotToken?: string | null; telegramChatId?: string | null; kakaoRestApiKey?: string | null } = {};
 
-      if (body.telegramBotToken !== undefined && body.telegramBotToken !== "●●●●●●●●") {
-        update.telegramBotToken = body.telegramBotToken;
-      }
-      if (body.telegramChatId !== undefined && body.telegramChatId !== "●●●●●●●●") {
-        update.telegramChatId = body.telegramChatId;
-      }
-      if (body.kakaoRestApiKey !== undefined && body.kakaoRestApiKey !== "●●●●●●●●") {
-        update.kakaoRestApiKey = body.kakaoRestApiKey;
-      }
+      const telegramBotToken = getUpdatedSecret(body.telegramBotToken);
+      if (telegramBotToken !== undefined) update.telegramBotToken = telegramBotToken;
+
+      const telegramChatId = getUpdatedSecret(body.telegramChatId);
+      if (telegramChatId !== undefined) update.telegramChatId = telegramChatId;
+
+      const kakaoRestApiKey = getUpdatedSecret(body.kakaoRestApiKey);
+      if (kakaoRestApiKey !== undefined) update.kakaoRestApiKey = kakaoRestApiKey;
 
       saveUserSettings(email, update);
       res.json({ ok: true });
     } catch (error) {
       next(error);
     }
-  });
-
-  router.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error(error);
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: "Invalid request", details: error.issues });
-      return;
-    }
-    res.status(500).json({ error: error instanceof Error ? error.message : "Unexpected server error" });
   });
 
   return router;

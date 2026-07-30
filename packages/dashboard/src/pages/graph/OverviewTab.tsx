@@ -18,6 +18,7 @@ import { StatCard } from "../../components/StatCard";
 import { useBreakpoint } from "../../useBreakpoint";
 import { TrendingUp, DollarSign, Home, Activity } from "lucide-react";
 import { copy } from "../../locales/ko";
+import { calculateBoxPlot } from "../../lib/stats";
 
 interface OverviewTabProps {
   data: any[]; // searchTransactions 결과
@@ -34,28 +35,6 @@ const tooltipContentStyle = {
   color: "var(--color-semantic-label-strong)",
   fontSize: "12px",
 };
-
-// 중위값 계산 헬퍼 함수
-function getMedian(arr: number[]): number {
-  if (arr.length === 0) return 0;
-  const sorted = [...arr].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 !== 0) {
-    return sorted[mid];
-  }
-  return (sorted[mid - 1] + sorted[mid]) / 2;
-}
-
-// 백분위수 계산 헬퍼 함수 (Q1, Q3용)
-function getPercentile(arr: number[], percentile: number): number {
-  if (arr.length === 0) return 0;
-  const sorted = [...arr].sort((a, b) => a - b);
-  const index = (sorted.length - 1) * percentile;
-  const lower = Math.floor(index);
-  const upper = Math.ceil(index);
-  const weight = index - lower;
-  return sorted[lower] * (1 - weight) + sorted[upper] * weight;
-}
 
 const BoxPlotShape = (props: any) => {
   const { x, y, width, height, payload, yAxis, showWhiskers = true, showBox = true, showMedian = true, showMean = true } = props;
@@ -651,31 +630,19 @@ export default function OverviewTab({
           boxRange: null,
         };
       }
-      const maxVal = Math.max(...val.prices);
-      const minVal = Math.min(...val.prices);
-      const sumVal = val.prices.reduce((sum, p) => sum + p, 0);
-      const avgVal = sumVal / count;
-      const medVal = getMedian(val.prices);
-      const q1Val = getPercentile(val.prices, 0.25);
-      const q3Val = getPercentile(val.prices, 0.75);
+      const stats = calculateBoxPlot(val.prices, 1);
 
       return {
         name: month,
         volume: count,
-        min: Number(minVal.toFixed(1)),
-        q1: Number(q1Val.toFixed(1)),
-        median: Number(medVal.toFixed(1)),
-        q3: Number(q3Val.toFixed(1)),
-        max: Number(maxVal.toFixed(1)),
-        avg: Number(avgVal.toFixed(1)),
-        whiskerRange: [
-          Number(minVal.toFixed(1)),
-          Number(maxVal.toFixed(1)),
-        ] as [number, number],
-        boxRange: [Number(q1Val.toFixed(1)), Number(q3Val.toFixed(1))] as [
-          number,
-          number,
-        ],
+        min: stats.min,
+        q1: stats.q1,
+        median: stats.median,
+        q3: stats.q3,
+        max: stats.max,
+        avg: stats.mean,
+        whiskerRange: [stats.min, stats.max] as [number, number],
+        boxRange: [stats.q1, stats.q3] as [number, number],
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -779,24 +746,20 @@ export default function OverviewTab({
           const count = pricesArr.length;
           if (count > maxCount) maxCount = count;
 
-          const sum = pricesArr.reduce((s, p) => s + p, 0);
-          const avg = sum / count;
-          const median = getMedian(pricesArr);
-          const min = Math.min(...pricesArr);
-          const max = Math.max(...pricesArr);
+          const stats = calculateBoxPlot(pricesArr, 1);
 
-          if (avg < minAvg) minAvg = avg;
-          if (avg > maxAvg) maxAvg = avg;
+          if (stats.mean < minAvg) minAvg = stats.mean;
+          if (stats.mean > maxAvg) maxAvg = stats.mean;
 
           const complexesArr = Array.from(cell.complexes);
           const complexesSummary = complexesArr.slice(0, 2).join(", ") +
             (complexesArr.length > 2 ? ` 외 ${complexesArr.length - 2}개` : "");
 
           data[key] = {
-            avg: Number(avg.toFixed(1)),
-            median: Number(median.toFixed(1)),
-            min: Number(min.toFixed(1)),
-            max: Number(max.toFixed(1)),
+            avg: stats.mean,
+            median: stats.median,
+            min: stats.min,
+            max: stats.max,
             count,
             complexesSummary
           };
@@ -811,24 +774,20 @@ export default function OverviewTab({
           } else {
             const pricesArr = floorCell.prices;
             const count = pricesArr.length;
-            const sum = pricesArr.reduce((s, p) => s + p, 0);
-            const avg = sum / count;
-            const median = getMedian(pricesArr);
-            const min = Math.min(...pricesArr);
-            const max = Math.max(...pricesArr);
+            const stats = calculateBoxPlot(pricesArr, 1);
 
-            if (avg < minAvg) minAvg = avg;
-            if (avg > maxAvg) maxAvg = avg;
+            if (stats.mean < minAvg) minAvg = stats.mean;
+            if (stats.mean > maxAvg) maxAvg = stats.mean;
 
             const complexesArr = Array.from(floorCell.complexes);
             const complexesSummary = complexesArr.slice(0, 2).join(", ") +
               (complexesArr.length > 2 ? ` 외 ${complexesArr.length - 2}개` : "");
 
             data[floorKey] = {
-              avg: Number(avg.toFixed(1)),
-              median: Number(median.toFixed(1)),
-              min: Number(min.toFixed(1)),
-              max: Number(max.toFixed(1)),
+              avg: stats.mean,
+              median: stats.median,
+              min: stats.min,
+              max: stats.max,
               count,
               complexesSummary
             };

@@ -1,7 +1,7 @@
 import { runRuleCheck } from "./ruleEngine.js";
 import { sendNotifications } from "./notifications.js";
 import { runCollector } from "@myhome/collector";
-import { getAllRules } from "@myhome/shared";
+import { getAllRules, mapLimit } from "@myhome/shared";
 import { batchGeocodeComplexes } from "./geocoding.js";
 import { Config } from "./config.js";
 import { graphCache } from "./cache.js";
@@ -91,7 +91,13 @@ export async function runDueRules() {
     const rules = getAllRules();
     const dueRules = rules.filter((rule) => rule.enabled && isAlertDue(rule.lastCheckedAt, rule.alertTime));
 
-    for (const rule of dueRules) {
+    if (dueRules.length === 0) return;
+
+    console.log(`[Scheduler] Executing ${dueRules.length} due rules with concurrency limit = 3...`);
+
+    // 최대 3개 동시성으로 병렬 룰 검사 수행
+    const CONCURRENCY_LIMIT = 3;
+    await mapLimit(dueRules, CONCURRENCY_LIMIT, async (rule) => {
       try {
         const outcome = await runRuleCheck(rule);
         const email = (rule as any).userEmail || "bootstrap-admin@myhome.local";
@@ -99,7 +105,9 @@ export async function runDueRules() {
       } catch (error) {
         console.error(`Scheduled check failed for ${rule.name}:`, error);
       }
-    }
+    });
+
+    console.log(`[Scheduler] Finished processing ${dueRules.length} rules.`);
   } finally {
     running = false;
   }

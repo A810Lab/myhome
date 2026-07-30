@@ -1,7 +1,11 @@
 import type { AppConfig, CheckRun, NotificationRecord, RegionSearchResult, RuleInput, TransactionRecord, WatchRule, ApartmentListResponse, UserActivityLog, ActivityStats } from "./types";
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
+  // 하위 호환성을 유지하면서 API 호출 주소를 v1으로 자동 변환합니다.
+  const targetUrl = url.startsWith("/api/") && !url.startsWith("/api/v1/")
+    ? url.replace("/api/", "/api/v1/")
+    : url;
+  const response = await fetch(targetUrl, {
     ...init,
     headers: {
       "content-type": "application/json",
@@ -189,7 +193,7 @@ export async function loadGraphContext(filter: GraphFilter): Promise<string> {
   if (filter.minArea !== undefined) params.set("minArea", String(filter.minArea));
   if (filter.maxArea !== undefined) params.set("maxArea", String(filter.maxArea));
 
-  const response = await fetch(`/api/graph/context?${params.toString()}`);
+  const response = await fetch(`/api/v1/graph/context?${params.toString()}`);
   if (!response.ok) {
     throw new Error("Failed to load graph context");
   }
