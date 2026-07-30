@@ -31,7 +31,7 @@ router.post("/insights", asyncHandler(async (req, res) => {
 
 router.delete("/insights/:id", asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const success = await deleteInsight(id);
+  const success = await deleteInsight(id as string);
   if (success) {
     res.json({ success: true });
   } else {

@@ -43,7 +43,7 @@ router.get("/stats", asyncHandler(async (_req, res) => {
 
 /** GET /api/graph/complex/:name/trend */
 router.get("/complex/:name/trend", asyncHandler(async (req, res) => {
-  const complexName = decodeURIComponent(req.params.name);
+  const complexName = decodeURIComponent(req.params.name as string);
   const lawdCode = req.query.lawdCode as string | undefined;
   const cacheKey = `trend:complex:${complexName}:${lawdCode ?? ""}`;
   const cached = graphCache.get(cacheKey);
@@ -66,7 +66,7 @@ router.get("/region/:lawdCode/trend", asyncHandler(async (req, res) => {
     res.json(cached);
     return;
   }
-  const trend = await getRegionTrend(lawdCode);
+  const trend = await getRegionTrend(lawdCode as string);
   const result = { lawdCode, trend };
   graphCache.set(cacheKey, result, TTL.TREND);
   res.json(result);
@@ -171,7 +171,7 @@ router.get("/topology", asyncHandler(async (req, res) => {
 
 /** GET /api/graph/complex/:name/detail — 단지별 입체 상세 분석 */
 router.get("/complex/:name/detail", asyncHandler(async (req, res) => {
-  const complexName = decodeURIComponent(req.params.name);
+  const complexName = decodeURIComponent(req.params.name as string);
   const lawdCode = req.query.lawdCode as string | undefined;
   const area = req.query.area ? Number(req.query.area) : undefined;
   const startDate = req.query.startDate as string | undefined;

@@ -34,7 +34,7 @@ router.delete("/presets/:id", asyncHandler(async (req, res) => {
   const email = getAuthenticatedEmail(req, res);
   if (!email) return;
   const { id } = req.params;
-  const success = await deletePreset(id, email);
+  const success = await deletePreset(id as string, email);
   if (success) {
     res.json({ success: true });
   } else {
@@ -66,7 +66,7 @@ router.delete("/presets/overview/:id", asyncHandler(async (req, res) => {
   const email = getAuthenticatedEmail(req, res);
   if (!email) return;
   const { id } = req.params;
-  const success = await deletePresetCore(id, email, "overview");
+  const success = await deletePresetCore(id as string, email, "overview");
   if (success) {
     res.json({ success: true });
   } else {
@@ -98,7 +98,7 @@ router.delete("/presets/analysis/:id", asyncHandler(async (req, res) => {
   const email = getAuthenticatedEmail(req, res);
   if (!email) return;
   const { id } = req.params;
-  const success = await deletePresetCore(id, email, "analysis");
+  const success = await deletePresetCore(id as string, email, "analysis");
   if (success) {
     res.json({ success: true });
   } else {

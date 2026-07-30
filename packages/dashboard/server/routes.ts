@@ -417,7 +417,8 @@ export function createRouter() {
         return res.status(400).json({ error: 'start_ymd and end_ymd must be in YYYYMM format' });
       }
 
-      const results = await mapLimit(months, 3, (m) => getApartmentPrices(lawdCode, m));
+      const months = getMonthsInRange(startMonth, endMonth);
+      const results = await mapLimit(months, 3, (m: string) => getApartmentPrices(lawdCode, m));
       const flattened = results.map((r) => r.transactions).flat();
       
       res.json({ ok: true, data: flattened });
