@@ -21,6 +21,7 @@ import type { BatchUpsertItem } from "@myhome/shared";
 import { adminRequired } from "./authRoutes.js";
 import { graphCache } from "./cache.js";
 import { getAuthenticatedEmail } from "./utils/authUtils.js";
+import { maskSecret, getUpdatedSecret } from "./utils/maskUtils.js";
 
 
 const comparisonValues: ComparisonCriteria[] = ["none", "parking", "large_complex", "transit", "newer", "livability"];
@@ -99,8 +100,6 @@ export function createRouter() {
       next(err);
     }
   });
-
-import { maskSecret, getUpdatedSecret } from "./utils/maskUtils.js";
 
   router.get("/system-config", adminRequired, async (_req, res, next) => {
     try {

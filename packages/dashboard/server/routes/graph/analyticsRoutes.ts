@@ -15,13 +15,13 @@ import {
   getRegionCollectionStatsByMonth,
   getRegionCollectionStatsByDate,
   getComplexGeo,
+  updateComplexCoords,
   type GraphFilter
 } from "@myhome/shared";
 import {
   geocodeAddress,
   findSubwayStationsNearCoords,
-  getComplexInfraRating,
-  updateComplexCoords
+  getComplexInfraRating
 } from "../../geocoding.js";
 import { graphCache, TTL } from "../../cache.js";
 import { asyncHandler } from "../../middlewares/asyncHandler.js";
