@@ -42,6 +42,7 @@ import {
   normalizeTransaction,
 } from "@myhome/shared";
 import type { BatchUpsertItem } from "@myhome/shared";
+import { Config } from "./config.js";
 import { readPresets, savePreset, deletePreset } from "./graphPresets.js";
 import { readInsights, saveInsight, deleteInsight } from "./graphInsights.js";
 import { findComplexesNearStation, batchGeocodeComplexes, geocodeAddress, findSubwayStationsNearCoords, getComplexInfraRating } from "./geocoding.js";
@@ -439,7 +440,14 @@ export function createGraphRouter(): Router {
   // 조회 조건 프리셋 라우트 (기존 graph_presets 테이블 사용)
   router.get("/presets", async (req, res) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const presets = await readPresets(email);
       res.json(presets);
     } catch (err: any) {
@@ -449,7 +457,14 @@ export function createGraphRouter(): Router {
 
   router.post("/presets", async (req, res) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const { name, filter } = req.body;
       if (!name || !filter) {
         res.status(400).json({ error: "name 또는 filter가 누락되었습니다." });
@@ -464,7 +479,14 @@ export function createGraphRouter(): Router {
 
   router.delete("/presets/:id", async (req, res) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const { id } = req.params;
       const success = await deletePreset(id, email);
       if (success) {
@@ -480,7 +502,14 @@ export function createGraphRouter(): Router {
   // 종합 현황용 프리셋 라우트 (지역만 저장, graph_presets_overview 테이블 사용)
   router.get("/presets/overview", async (req, res) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const presets = await readPresetsCore(email, "overview");
       res.json(presets);
     } catch (err: any) {
@@ -490,7 +519,14 @@ export function createGraphRouter(): Router {
 
   router.post("/presets/overview", async (req, res) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const { name, filter } = req.body;
       if (!name || !filter) {
         res.status(400).json({ error: "name 또는 filter가 누락되었습니다." });
@@ -505,7 +541,14 @@ export function createGraphRouter(): Router {
 
   router.delete("/presets/overview/:id", async (req, res) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const { id } = req.params;
       const success = await deletePresetCore(id, email, "overview");
       if (success) {
@@ -521,7 +564,14 @@ export function createGraphRouter(): Router {
   // 단지 분석용 프리셋 라우트 (지역 + 단지명 + 평수 저장, graph_presets_analysis 테이블 사용)
   router.get("/presets/analysis", async (req, res) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const presets = await readPresetsCore(email, "analysis");
       res.json(presets);
     } catch (err: any) {
@@ -531,7 +581,14 @@ export function createGraphRouter(): Router {
 
   router.post("/presets/analysis", async (req, res) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const { name, regionName, buildingName, areaM2 } = req.body;
       if (!name || !regionName || !buildingName) {
         res.status(400).json({ error: "name, regionName, buildingName이 필요합니다." });
@@ -546,7 +603,14 @@ export function createGraphRouter(): Router {
 
   router.delete("/presets/analysis/:id", async (req, res) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const { id } = req.params;
       const success = await deletePresetCore(id, email, "analysis");
       if (success) {

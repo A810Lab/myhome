@@ -30,3 +30,19 @@ Express 백엔드 서버, 매물 감시 룰 엔진 및 자동 수집 스케줄�
 - **동작 주기**:
   1. **감시 스케줄러 (300초 간격)**: 등록 알림 조건(`rules`) 대상 `runRuleCheck` 실행, Telegram 알림 주기적 스캔.
   2. **자동 수집 스케줄러 (매일 1회)**: 매일 새벽 6시 이후 최초 구동 시 주요 지역 대상 `@myhome/collector` `runCollector` 수집기 백그라운드 작동, 로컬 SQLite DB 실거래 데이터 대량 적재.
+
+---
+
+## 4. 주요 환경변수 (Backend)
+
+| 환경변수 | 기본값 | 설명 |
+|----------|--------|------|
+| `PORT` | `4174` | 서버 포트. `config.yaml`의 `port` 보다 우선. |
+| `HOST` | `0.0.0.0` | 서버 바인드 주소. |
+| `CHECK_INTERVAL_SECONDS` | `300` | 룰 감시 스케줄러 실행 간격(초). |
+| `GRAPH_DB_ENABLED` | `true` | SQLite 실거래 DB 적재 스위치. `true`로 설정해야 `ruleEngine.ts`의 자동 수집(upsert)이 활성화됩니다. `false`이면 API 조회만 수행하고 DB에 저장하지 않습니다. |
+| `GOOGLE_CLIENT_ID` | — | Google OAuth 클라이언트 ID. 미설정 시 Bootstrap Admin 모드가 필요합니다. |
+| `ENABLE_BOOTSTRAP_ADMIN` | — | `true`로 설정 시 Google OAuth 미설정 환경에서 관리자 세션을 부여. **개발/테스트 전용.** |
+| `TELEGRAM_BOT_TOKEN` | — | Telegram 알림 발송용 봇 토큰. |
+| `TELEGRAM_CHAT_ID` | — | 알림 수신 Telegram 채팅 ID. |
+

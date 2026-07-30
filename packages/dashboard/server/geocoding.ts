@@ -7,6 +7,7 @@
  * - 이후 요청은 DB에서 즉시 히트
  */
 
+import { Config } from "./config.js";
 import {
   getComplexesWithCoords,
   getComplexesWithoutCoords,
@@ -127,7 +128,7 @@ export async function geocodeAddressDetailed(address: string): Promise<GeocodeDe
     return { success: false, reason: "이전 요청 실패로 캐시된 데이터 (검색 결과 없음)" };
   }
 
-  const apiKey = process.env.KAKAO_REST_API_KEY;
+  const apiKey = Config.KAKAO_REST_API_KEY;
   if (!apiKey) {
     const reason = "카카오 API 키(KAKAO_REST_API_KEY) 설정이 누락되었습니다.";
     console.warn(`[Geocoding] ${reason}`);
@@ -210,7 +211,7 @@ export async function geocodeSubwayStation(stationName: string): Promise<Geocoor
     return geocodeCache.get(cacheKey) ?? null;
   }
 
-  const apiKey = process.env.KAKAO_REST_API_KEY;
+  const apiKey = Config.KAKAO_REST_API_KEY;
   if (!apiKey) {
     console.warn("[Geocoding] KAKAO_REST_API_KEY가 설정되지 않았습니다.");
     return null;
@@ -668,7 +669,7 @@ export async function findSubwayStationsNearCoords(
     return nearbySubwaysCache.get(cacheKey) || [];
   }
 
-  const apiKey = process.env.KAKAO_REST_API_KEY;
+  const apiKey = Config.KAKAO_REST_API_KEY;
   if (!apiKey) {
     console.warn("[Geocoding] KAKAO_REST_API_KEY가 설정되지 않았습니다.");
     return [];
@@ -1045,7 +1046,7 @@ export async function getComplexInfraRating(
     return nearbyInfraCache.get(cacheKey);
   }
 
-  const apiKey = process.env.KAKAO_REST_API_KEY;
+  const apiKey = Config.KAKAO_REST_API_KEY;
   if (!apiKey) {
     const mock = generateMockInfraRating(complexName);
     nearbyInfraCache.set(cacheKey, mock);

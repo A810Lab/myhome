@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { Config } from "./config.js";
 import { appendNotification } from "./storage.js";
 import type { AlertChannel, NotificationRecord, TransactionMatch, WatchRule } from "./types.js";
 import { SOURCE_LIMIT_NOTICE } from "./constants.js";
@@ -34,8 +35,8 @@ function formatAlert(rule: WatchRule, matches: TransactionMatch[]) {
 
 async function sendTelegram(rule: WatchRule, matches: TransactionMatch[], email: string): Promise<SendResult> {
   const settings = getUserSettings(email);
-  const token = settings?.telegramBotToken || process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = settings?.telegramChatId || process.env.TELEGRAM_CHAT_ID;
+  const token = settings?.telegramBotToken || Config.TELEGRAM_BOT_TOKEN;
+  const chatId = settings?.telegramChatId || Config.TELEGRAM_CHAT_ID;
   if (!token || !chatId) {
     return { channel: "telegram", status: "skipped", message: "Telegram credentials are not configured for this user." };
   }
@@ -84,5 +85,5 @@ export async function sendNotifications(rule: WatchRule, matches: TransactionMat
 }
 
 export function isTelegramConfigured() {
-  return Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID);
+  return Boolean(Config.TELEGRAM_BOT_TOKEN && Config.TELEGRAM_CHAT_ID);
 }

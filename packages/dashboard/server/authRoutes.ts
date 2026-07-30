@@ -1,7 +1,10 @@
 import express from "express";
+import { Config } from "./config.js";
 import crypto from "node:crypto";
 import { saveSession, getSession, deleteSession, getUserPasswordHash, updateUserCredentials, isTemporaryPassword, getDb } from "@myhome/shared";
 import { getSystemConfig, saveSystemConfig } from "./storage.js";
+import { validateBody, loginLocalSchema, credentialsSchema, createUserSchema } from "./validation.js";
+
 
 function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -85,8 +88,8 @@ export function createAuthRouter() {
   const router = express.Router();
 
   router.get("/google", (req, res) => {
-    const googleClientId = process.env.GOOGLE_CLIENT_ID;
-    const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const googleClientId = Config.GOOGLE_CLIENT_ID;
+    const googleRedirectUri = Config.GOOGLE_REDIRECT_URI;
 
     if (!googleClientId || !googleRedirectUri) {
       console.error("❌ 구글 OAuth 설정이 완료되지 않았습니다. GOOGLE_CLIENT_ID / GOOGLE_REDIRECT_URI 확인 필요.");
@@ -108,9 +111,9 @@ export function createAuthRouter() {
       return;
     }
 
-    const googleClientId = process.env.GOOGLE_CLIENT_ID;
-    const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const googleClientId = Config.GOOGLE_CLIENT_ID;
+    const googleClientSecret = Config.GOOGLE_CLIENT_SECRET;
+    const googleRedirectUri = Config.GOOGLE_REDIRECT_URI;
 
     if (!googleClientId || !googleClientSecret || !googleRedirectUri) {
       res.status(500).json({ error: "Google OAuth credentials are not fully configured." });
@@ -158,7 +161,7 @@ export function createAuthRouter() {
       const email = payload.email.toLowerCase();
 
       // 3. 이메일 화이트리스트 검사 (ALLOWED_EMAILS)
-      const allowedEmailsEnv = process.env.ALLOWED_EMAILS || "";
+      const allowedEmailsEnv = Config.ALLOWED_EMAILS || "";
       const allowedList = allowedEmailsEnv
         .split(",")
         .map((e) => e.trim().toLowerCase())
@@ -191,15 +194,20 @@ export function createAuthRouter() {
   });
 
   router.get("/me", (req, res) => {
-    // [BOOTSTRAP 모드] 구글 설정을 마치기 전까지 임시 세션 부여
-    const googleClientId = process.env.GOOGLE_CLIENT_ID;
-    const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI;
+    // [BOOTSTRAP 모드] 구글 설정을 마치기 전까지 임시 세션 부여 (opt-in)
+    const googleClientId = Config.GOOGLE_CLIENT_ID;
+    const googleRedirectUri = Config.GOOGLE_REDIRECT_URI;
     if (!googleClientId || !googleRedirectUri) {
-      res.json({
-        isAuthenticated: true,
-        email: "bootstrap-admin@myhome.local",
-        isAdmin: true,
-      });
+      if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+        res.json({
+          isAuthenticated: true,
+          email: "bootstrap-admin@myhome.local",
+          isAdmin: true,
+        });
+      } else {
+        // No Google config and bootstrap admin disabled -> unauthenticated
+        res.json({ isAuthenticated: false });
+      }
       return;
     }
 
@@ -221,8 +229,8 @@ export function createAuthRouter() {
       return;
     }
 
-    const allowedEmailsEnv = process.env.ALLOWED_EMAILS || "";
-    const adminEmailsEnv = process.env.ADMIN_EMAILS || "";
+    const allowedEmailsEnv = Config.ALLOWED_EMAILS || "";
+    const adminEmailsEnv = Config.ADMIN_EMAILS || "";
     const isAdmin = isUserAdmin(session.email, allowedEmailsEnv, adminEmailsEnv);
     const isTemp = session.loginMethod === "local" && isTemporaryPassword(session.email);
 
@@ -244,7 +252,7 @@ export function createAuthRouter() {
     res.json({ ok: true });
   });
 
-  router.post("/login-local", (req, res) => {
+  router.post("/login-local", validateBody(loginLocalSchema), (req, res) => {
     const { email, password } = req.body;
     if (!email || !password || typeof email !== "string" || typeof password !== "string") {
       res.status(400).json({ error: "이메일과 비밀번호를 입력해주세요." });
@@ -365,7 +373,7 @@ export function createAuthRouter() {
 
       // 3. ALLOWED_EMAILS 에 추가
       const config = await getSystemConfig();
-      const allowedEmailsEnv = config.allowedEmails || process.env.ALLOWED_EMAILS || "";
+      const allowedEmailsEnv = config.allowedEmails || Config.ALLOWED_EMAILS || "";
       let allowedList = allowedEmailsEnv
         .split(",")
         .map((e) => e.trim().toLowerCase())
@@ -376,7 +384,7 @@ export function createAuthRouter() {
       }
 
       // 4. ADMIN_EMAILS 에 추가
-      let adminList = (config.adminEmails || process.env.ADMIN_EMAILS || "")
+      let adminList = (config.adminEmails || Config.ADMIN_EMAILS || "")
         .split(",")
         .map((e) => e.trim().toLowerCase())
         .filter(Boolean);
@@ -419,14 +427,17 @@ export function authMiddleware(req: express.Request, res: express.Response, next
     return next();
   }
 
-  // [BOOTSTRAP 모드] 구글 OAuth가 설정되지 않은 경우, 임시 관리자 권한을 부여하여 대시보드 진입 허용 (환경설정 유도)
-  const googleClientId = process.env.GOOGLE_CLIENT_ID;
-  const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI;
-  if (!googleClientId || !googleRedirectUri) {
-    console.warn("⚠️ 구글 OAuth 설정이 감지되지 않아 임시 Bootstrap 관리자 세션을 부여합니다. 환경 설정을 진행해 주세요.");
-    req.user = { email: "bootstrap-admin@myhome.local", isAdmin: true };
-    return next();
-  }
+    const enableBootstrapAdmin = Config.ENABLE_BOOTSTRAP_ADMIN === 'true';
+    if (!Config.GOOGLE_CLIENT_ID || !Config.GOOGLE_REDIRECT_URI) {
+      if (enableBootstrapAdmin) {
+        console.warn("⚠️ ENABLE_BOOTSTRAP_ADMIN 활성화: 구글 OAuth 설정이 없지만 부트스트랩 관리자 세션을 부여합니다.");
+        req.user = { email: "bootstrap-admin@myhome.local", isAdmin: true };
+        return next();
+      }
+      console.error("❌ 구글 OAuth 설정이 누락되었습니다. Bootstrap admin 옵션이 비활성화되었습니다.");
+      res.status(500).json({ error: "Google OAuth is not configured and bootstrap admin is disabled." });
+      return;
+    }
 
   // API 엔드포인트가 아니거나 정적 파일 요청이면 인증 절차 진행하되 미인증 시 로그인 페이지로
   const sessionId = getSessionIdFromCookies(req.headers.cookie);
@@ -448,8 +459,8 @@ export function authMiddleware(req: express.Request, res: express.Response, next
   }
 
   // 로그인 상태 유지
-  const allowedEmailsEnv = process.env.ALLOWED_EMAILS || "";
-  const adminEmailsEnv = process.env.ADMIN_EMAILS || "";
+  const allowedEmailsEnv = Config.ALLOWED_EMAILS || "";
+  const adminEmailsEnv = Config.ADMIN_EMAILS || "";
   const isAdmin = isUserAdmin(session.email, allowedEmailsEnv, adminEmailsEnv);
   req.user = { email: session.email, isAdmin };
   next();

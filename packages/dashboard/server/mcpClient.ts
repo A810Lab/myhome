@@ -2,20 +2,32 @@
  * mcpClient.ts
  *
  * ⚠️  이 파일의 MCP(mcporter/mcp-gateway) 기능은 자연어 질의 전용으로 예약되어 있습니다.
- *    예: "판교역 반경 500미터 내 아파트 단지를 알려줘" 같은 NL 쿼리 처리 시 사용
+ *    예: "판교역 반경 500미터 내 아파트 단지를 알려줘" 같은 NL 쿼리 처리 시 사용.
  *
  * 실거래 데이터 조회·지역코드 변환·단지 목록 조회는 모두 국토부 API 직접 호출을 사용합니다.
  */
 import { fetchApartmentPricesDirect } from "@myhome/shared";
 import type { McpPriceResult } from "./types.js";
+import { createMcporterLimiter } from "./mcpThrottle.js";
 
 // ──────────────────────────────────────────────────
 // 실거래 조회 (국토부 API 직접 호출)
 // ──────────────────────────────────────────────────
 
+// Configure a limiter: 최소 200 ms 간격, 캐시 비활성화, 재시도 지연 200/500/1000ms
+const mcpLimiter = createMcporterLimiter({
+  minIntervalMs: 200,
+  cacheTtlMs: 0,
+  retryDelaysMs: [200, 500, 1000],
+});
+
 export async function getApartmentPrices(lawdCode: string, dealMonth: string): Promise<McpPriceResult> {
-  const transactions = await fetchApartmentPricesDirect(lawdCode, dealMonth);
-  return { transactions, raw: { result: { transactions } } };
+  // limiter key = "lawdCode:dealMonth"
+  const result = await mcpLimiter.run(`${lawdCode}:${dealMonth}`, async () => {
+    const transactions = await fetchApartmentPricesDirect(lawdCode, dealMonth);
+    return { transactions, raw: { result: { transactions } } };
+  });
+  return result;
 }
 
 /**
@@ -33,8 +45,11 @@ export async function getApartmentList(lawdCode: string): Promise<string[]> {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const month = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
     try {
-      const transactions = await fetchApartmentPricesDirect(lawdCode, month);
-      for (const t of transactions) {
+      // limiter key = "lawdCode:list:month"
+      const res = await mcpLimiter.run(`${lawdCode}:list:${month}`, async () => {
+        return await fetchApartmentPricesDirect(lawdCode, month);
+      });
+      for (const t of res) {
         if (t.apartmentName) names.add(t.apartmentName.trim());
       }
     } catch (err) {

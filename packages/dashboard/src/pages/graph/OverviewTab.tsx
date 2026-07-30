@@ -21,7 +21,7 @@ import { copy } from "../../locales/ko";
 
 interface OverviewTabProps {
   data: any[]; // searchTransactions 결과
-  onSelectComplex?: (complexName: string) => void;
+  onSelectComplex?: (complexName: string, lawdCode?: string) => void;
   areaUnit?: "pyeong" | "m2";
   areaType?: "supply" | "dedicated";
   locale?: "ko" | "en";
@@ -863,6 +863,7 @@ export default function OverviewTab({
       count: number;
       prices: number[];
       region: string;
+      lawdCode: string;
     }>();
 
     targetData.forEach((d) => {
@@ -870,20 +871,23 @@ export default function OverviewTab({
       if (!name) return;
 
       const rName = d.regionName ? d.regionName.split(" ").slice(-1)[0] : "기타";
-      const stat = complexStats.get(name) || { count: 0, prices: [] as number[], region: rName };
+      const key = `${name}|${d.lawdCode}`;
+      const stat = complexStats.get(key) || { count: 0, prices: [] as number[], region: rName, lawdCode: d.lawdCode };
       stat.count += 1;
       stat.prices.push(d.priceEok);
-      complexStats.set(name, stat);
+      complexStats.set(key, stat);
     });
 
     // 3. 탑 10 추출 및 정밀 데이터 가공
     return Array.from(complexStats.entries())
-      .map(([name, stat]) => {
+      .map(([key, stat]) => {
+        const name = key.split("|")[0];
         const avgPrice = stat.prices.reduce((s, p) => s + p, 0) / stat.count;
         const maxPrice = Math.max(...stat.prices);
         const minPrice = Math.min(...stat.prices);
         return {
           name,
+          lawdCode: stat.lawdCode,
           거래수: stat.count,
           평균가: Number(avgPrice.toFixed(1)),
           최고가: Number(maxPrice.toFixed(1)),
@@ -1467,7 +1471,8 @@ export default function OverviewTab({
                     interval={0}
                     height={100}
                     tick={(props: any) => {
-                      const { x, y, payload } = props;
+                      const { x, y, payload, index } = props;
+                      const item = complexChartData[index];
                       return (
                         <g transform={`translate(${x},${y})`}>
                           <text
@@ -1481,7 +1486,7 @@ export default function OverviewTab({
                             fontWeight="bold"
                             transform="rotate(-90)"
                             className="cursor-pointer hover:fill-primary transition-colors"
-                            onClick={() => onSelectComplex && onSelectComplex(payload.value)}
+                            onClick={() => onSelectComplex && item && onSelectComplex(item.name, item.lawdCode)}
                           >
                             {payload.value}
                           </text>
@@ -1563,8 +1568,9 @@ export default function OverviewTab({
                       cursor="pointer"
                       fillOpacity={0.85}
                       onClick={(data: any) => {
-                        if (data && data.name && onSelectComplex) {
-                          onSelectComplex(data.name);
+                        const target = data?.payload || data;
+                        if (target && target.name && onSelectComplex) {
+                          onSelectComplex(target.name, target.lawdCode);
                         }
                       }}
                     >
@@ -1589,9 +1595,10 @@ export default function OverviewTab({
                       activeDot={{ r: 6, fill: "var(--color-semantic-background-elevated-normal)", stroke: "var(--color-chart-median)", strokeWidth: 3 }}
                       dot={{ cursor: "pointer", r: 4, fill: "var(--color-semantic-background-elevated-normal)", stroke: "var(--color-chart-median)", strokeWidth: 2.5 }}
                       onClick={(data: any) => {
-                        const name = data?.name || data?.activeLabel || data?.payload?.name;
+                        const target = data?.payload || data;
+                        const name = target?.name || data?.activeLabel;
                         if (name && onSelectComplex) {
-                          onSelectComplex(name);
+                          onSelectComplex(name, target?.lawdCode);
                         }
                       }}
                     />

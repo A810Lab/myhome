@@ -3,6 +3,7 @@ import { sendNotifications } from "./notifications.js";
 import { runCollector } from "@myhome/collector";
 import { getAllRules } from "@myhome/shared";
 import { batchGeocodeComplexes } from "./geocoding.js";
+import { Config } from "./config.js";
 import { graphCache } from "./cache.js";
 
 
@@ -35,6 +36,23 @@ function isAlertDue(lastCheckedAt: string | undefined, alertTime: string | undef
 let running = false;
 let timerId: NodeJS.Timeout | undefined;
 let lastCollectedDate = "";
+
+/**
+ * 현재 실행 중인 스케줄러 주기가 완료될 때까지 기다린 뒤 인터벌을 해제합니다.
+ * index.ts의 graceful shutdown에서 호출하세요.
+ */
+export async function stopScheduler(): Promise<void> {
+  if (timerId) {
+    clearInterval(timerId);
+    timerId = undefined;
+  }
+  // 진행 중인 runDueRules 주기가 끝날 때까지 대기 (최대 30초)
+  const start = Date.now();
+  while (running && Date.now() - start < 30_000) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 200));
+  }
+  console.log("[Scheduler] Stopped gracefully.");
+}
 
 export async function runDueCollector() {
   const now = new Date();
@@ -88,7 +106,7 @@ export async function runDueRules() {
 }
 
 export function startScheduler() {
-  const seconds = Number(process.env.CHECK_INTERVAL_SECONDS ?? "300");
+  const seconds = Number(Config.CHECK_INTERVAL_SECONDS ?? "300");
   const intervalMs = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 300_000;
 
   // 기동 시 최초 1회 즉시 실행
@@ -100,14 +118,5 @@ export function startScheduler() {
     void runDueCollector();
   }, intervalMs);
 
-  const shutdown = () => {
-    if (timerId) {
-      clearInterval(timerId);
-      timerId = undefined;
-      console.log("Scheduler stopped gracefully.");
-    }
-  };
-
-  process.on("SIGTERM", shutdown);
-  process.on("SIGINT", shutdown);
+  // SIGTERM/SIGINT 처리는 index.ts의 shutdown 함수에서 stopScheduler()를 통해 통합 관리합니다.
 }

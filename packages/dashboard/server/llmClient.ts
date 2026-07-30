@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getSystemConfig } from "./storage.js";
+import { Config } from "./config.js";
 
 async function getApiKey(): Promise<string> {
   try {
@@ -10,7 +11,7 @@ async function getApiKey(): Promise<string> {
   } catch (error) {
     console.error("Failed to read system config for Gemini API key:", error);
   }
-  return process.env.GEMINI_API_KEY || "";
+  return Config.GEMINI_API_KEY || "";
 }
 
 export async function generateTextWithGemini(prompt: string): Promise<string> {

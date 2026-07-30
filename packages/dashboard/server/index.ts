@@ -3,11 +3,12 @@ import express from "express";
 import { createRouter } from "./routes.js";
 import { createGraphRouter } from "./routes-graph.js";
 import { createAdminRouter } from "./routes-admin.js";
-import { startScheduler } from "./scheduler.js";
+import { startScheduler, stopScheduler } from "./scheduler.js";
 import { initDb, closeGraphDb, cleanExpiredSessions } from "@myhome/shared";
 import { createAuthRouter, authMiddleware, adminRequired } from "./authRoutes.js";
 
 import { join, dirname } from "node:path";
+import { Config } from "./config.js";
 
 function findAndLoadEnv() {
   let currentDir = process.cwd();
@@ -67,7 +68,7 @@ function findAndLoadYamlPort(): number | null {
 const app = express();
 app.set('trust proxy', 1); // Synology Nginx reverse proxy 환경에서 X-Forwarded-For 헤더 신뢰
 const yamlPort = findAndLoadYamlPort();
-const port = Number(process.env.PORT ?? yamlPort ?? "4174");
+const port = Number(Config.PORT ?? yamlPort ?? "4174");
 
 app.use(express.json());
 app.use("/api", authMiddleware);
@@ -90,7 +91,7 @@ if (existsSync(distPath)) {
   });
 }
 
-const host = process.env.HOST ?? "0.0.0.0";
+const host = Config.HOST ?? "0.0.0.0";
 const server = app.listen(port, host, async () => {
   console.log(`Apartment Alert API listening on http://${host}:${port}`);
   try {
@@ -115,11 +116,12 @@ const server = app.listen(port, host, async () => {
   startScheduler();
 });
 
-// Graceful shutdown — SQLite DB 해제
+// Graceful shutdown — 스케줄러 완료 대기 후 SQLite DB 해제
 async function shutdown(signal: string) {
   console.log(`\n[${signal}] 서버 종료 중…`);
   server.close(async () => {
-    await closeGraphDb();
+    await stopScheduler();   // 진행 중인 스케줄러 주기 완료 대기
+    await closeGraphDb();    // SQLite DB 연결 해제
     console.log("SQLite DB 연결 해제 완료. 종료.");
     process.exit(0);
   });

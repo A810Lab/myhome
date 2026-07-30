@@ -1,4 +1,5 @@
 import type { RegionCodeResult } from "./types.js";
+import { Config } from "./config.js";
 
 const JUSO_API_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do";
 
@@ -7,14 +8,14 @@ const JUSO_API_URL = "https://business.juso.go.kr/addrlink/addrLinkApi.do";
  * 하위 호환성을 위해 함수명은 `isKakaoConfigured`로 유지합니다.
  */
 export function isKakaoConfigured(): boolean {
-  return Boolean(process.env.JUSO_CONFM_KEY) || Boolean(process.env.KAKAO_REST_API_KEY);
+  return Boolean(Config.JUSO_CONFM_KEY) || Boolean(Config.KAKAO_REST_API_KEY);
 }
 
 /**
  * 카카오 로컬 API를 통해 지번에 매핑된 법정동 코드를 반환합니다.
  */
 async function getBCodeForAddress(addressName: string): Promise<string | null> {
-  const apiKey = process.env.KAKAO_REST_API_KEY;
+  const apiKey = Config.KAKAO_REST_API_KEY;
   if (!apiKey) return null;
 
   const url = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(addressName)}`;
@@ -39,8 +40,8 @@ async function getBCodeForAddress(addressName: string): Promise<string | null> {
  * 반환 결과의 admCd(10자리 행정구역코드) 또는 b_code의 앞 5자리를 국토교통부 실거래 조회의 LAWD_CD로 활용합니다.
  */
 export async function searchAddresses(query: string): Promise<RegionCodeResult[]> {
-  const kakaoKey = process.env.KAKAO_REST_API_KEY;
-  const jusoKey = process.env.JUSO_CONFM_KEY;
+  const kakaoKey = Config.KAKAO_REST_API_KEY;
+  const jusoKey = Config.JUSO_CONFM_KEY;
 
   if (kakaoKey) {
     // 1. 카카오 주소 검색(address.json) 시도

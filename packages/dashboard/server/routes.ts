@@ -1,6 +1,8 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import { z } from "zod";
+import { Config } from "./config.js";
+import { validateBody, validateQuery, systemConfigUpdateSchema, transactionQuerySchema, complexCoordsSchema, complexCoordsResetSchema, userConfigUpdateSchema, loginLocalSchema, credentialsSchema, createUserSchema, apartmentsListQuerySchema, regionsSearchQuerySchema, logEntrySchema } from "./validation.js";
 import { isTelegramConfigured, sendNotifications } from "./notifications.js";
 import { getSourceLimitNotice, runRuleCheck } from "./ruleEngine.js";
 import { deleteCheckRun, deleteRule, readState, readStateForUser, updateRulePatch, upsertRule, getSystemConfig, saveSystemConfig } from "./storage.js";
@@ -67,6 +69,9 @@ const apiLimiter = rateLimit({
 
 export function createRouter() {
   const router = express.Router();
+  // Global validation middleware – accepts any fields but runs through Zod for consistency
+  router.use(validateBody(z.object({}).passthrough()));
+  router.use(validateQuery(z.object({}).passthrough()));
   router.use(apiLimiter);
 
   router.get("/health", (_req, res) => {
@@ -80,14 +85,14 @@ export function createRouter() {
         telegramConfigured: isTelegramConfigured(),
         kakaoStatus: "phase-2",
         kakaoSearchConfigured: isKakaoConfigured(),
-        kakaoConfigured: Boolean(process.env.KAKAO_REST_API_KEY),
-        jusoConfigured: Boolean(process.env.JUSO_CONFM_KEY),
-        dataGoKrConfigured: Boolean(process.env.DATA_GO_KR_API_KEY),
-        kakaoJavascriptConfigured: Boolean(process.env.KAKAO_JAVASCRIPT_KEY),
-        kakaoJavascriptKey: process.env.KAKAO_JAVASCRIPT_KEY || "",
-        kakaoNativeAppConfigured: Boolean(process.env.KAKAO_NATIVE_APP_KEY),
+        kakaoConfigured: Boolean(Config.KAKAO_REST_API_KEY),
+        jusoConfigured: Boolean(Config.JUSO_CONFM_KEY),
+        dataGoKrConfigured: Boolean(Config.DATA_GO_KR_API_KEY),
+        kakaoJavascriptConfigured: Boolean(Config.KAKAO_JAVASCRIPT_KEY),
+        kakaoJavascriptKey: Config.KAKAO_JAVASCRIPT_KEY || "",
+        kakaoNativeAppConfigured: Boolean(Config.KAKAO_NATIVE_APP_KEY),
         dataSourceNotice: getSourceLimitNotice(),
-        geminiConfigured: Boolean(config.geminiApiKey || process.env.GEMINI_API_KEY)
+        geminiConfigured: Boolean(config.geminiApiKey || Config.GEMINI_API_KEY)
       });
     } catch (err) {
       next(err);
@@ -98,26 +103,26 @@ export function createRouter() {
     try {
       const config = await getSystemConfig();
       res.json({
-        telegramBotToken: config.telegramBotToken ? "●●●●●●●●" : (process.env.TELEGRAM_BOT_TOKEN ? "●●●●●●●●" : ""),
-        telegramChatId: config.telegramChatId ? "●●●●●●●●" : (process.env.TELEGRAM_CHAT_ID ? "●●●●●●●●" : ""),
-        kakaoRestApiKey: config.kakaoRestApiKey ? "●●●●●●●●" : (process.env.KAKAO_REST_API_KEY ? "●●●●●●●●" : ""),
-        jusoConfmKey: config.jusoConfmKey ? "●●●●●●●●" : (process.env.JUSO_CONFM_KEY ? "●●●●●●●●" : ""),
-        dataGoKrApiKey: config.dataGoKrApiKey ? "●●●●●●●●" : (process.env.DATA_GO_KR_API_KEY ? "●●●●●●●●" : ""),
-        kakaoJavascriptKey: config.kakaoJavascriptKey ? "●●●●●●●●" : (process.env.KAKAO_JAVASCRIPT_KEY ? "●●●●●●●●" : ""),
-        kakaoNativeAppKey: config.kakaoNativeAppKey ? "●●●●●●●●" : (process.env.KAKAO_NATIVE_APP_KEY ? "●●●●●●●●" : ""),
-        googleClientId: config.googleClientId || (process.env.GOOGLE_CLIENT_ID || ""),
-        googleClientSecret: config.googleClientSecret ? "●●●●●●●●" : (process.env.GOOGLE_CLIENT_SECRET ? "●●●●●●●●" : ""),
-        googleRedirectUri: config.googleRedirectUri || (process.env.GOOGLE_REDIRECT_URI || ""),
-        allowedEmails: config.allowedEmails || (process.env.ALLOWED_EMAILS || ""),
-        adminEmails: config.adminEmails || (process.env.ADMIN_EMAILS || ""),
-        geminiApiKey: config.geminiApiKey ? "●●●●●●●●" : (process.env.GEMINI_API_KEY ? "●●●●●●●●" : "")
+        telegramBotToken: Config.TELEGRAM_BOT_TOKEN ? "●●●●●●●●" : "",
+        telegramChatId: Config.TELEGRAM_CHAT_ID ? "●●●●●●●●" : "",
+        kakaoRestApiKey: Config.KAKAO_REST_API_KEY ? "●●●●●●●●" : "",
+        jusoConfmKey: Config.JUSO_CONFM_KEY ? "●●●●●●●●" : "",
+        dataGoKrApiKey: Config.DATA_GO_KR_API_KEY ? "●●●●●●●●" : "",
+        kakaoJavascriptKey: Config.KAKAO_JAVASCRIPT_KEY ? "●●●●●●●●" : "",
+        kakaoNativeAppKey: Config.KAKAO_NATIVE_APP_KEY ? "●●●●●●●●" : "",
+        googleClientId: Config.GOOGLE_CLIENT_ID || "",
+        googleClientSecret: Config.GOOGLE_CLIENT_SECRET ? "●●●●●●●●" : "",
+        googleRedirectUri: Config.GOOGLE_REDIRECT_URI || "",
+        allowedEmails: Config.ALLOWED_EMAILS || "",
+        adminEmails: Config.ADMIN_EMAILS || "",
+        geminiApiKey: Config.GEMINI_API_KEY ? "●●●●●●●●" : ""
       });
     } catch (err) {
       next(err);
     }
   });
 
-  router.post("/system-config", adminRequired, async (req, res, next) => {
+  router.post("/system-config", adminRequired, validateBody(systemConfigUpdateSchema), async (req, res, next) => {
     try {
       const body = req.body;
       const update: SystemConfig = {};
@@ -178,7 +183,7 @@ export function createRouter() {
     }
   });
 
-  router.put("/complexes/coords", async (req, res, next) => {
+  router.put("/complexes/coords", validateBody(complexCoordsSchema), async (req, res, next) => {
     try {
       const { complexId, lat, lng } = req.body;
       if (!complexId || lat === undefined || lng === undefined) {
@@ -192,7 +197,7 @@ export function createRouter() {
     }
   });
 
-  router.post("/complexes/coords/reset", async (req, res, next) => {
+  router.post("/complexes/coords/reset", validateBody(complexCoordsResetSchema), async (req, res, next) => {
     try {
       const { complexId } = req.body;
       if (!complexId) {
@@ -226,7 +231,7 @@ export function createRouter() {
     }
   });
 
-  router.get("/apartments/list", async (req, res, next) => {
+  router.get("/apartments/list", validateQuery(apartmentsListQuerySchema), async (req, res, next) => {
     try {
       const lawdCode = String(req.query.lawd_cd || "");
       const forceRefresh = req.query.refresh === "true";
@@ -252,7 +257,7 @@ export function createRouter() {
     }
   });
 
-  router.get("/transactions", async (req, res, next) => {
+  router.get("/transactions", validateQuery(transactionQuerySchema), async (req, res, next) => {
     try {
       const lawdCodeParam = String(req.query.lawd_cd || "");
       // 지원: 단일 코드 혹은 콤마 구분 다중 코드
@@ -361,7 +366,7 @@ export function createRouter() {
       res.json(records);
 
       // Optional graph DB upsert when fresh data fetched
-      if (process.env.GRAPH_DB_ENABLED === "true" && records.length > 0 && !isCacheHitOnly) {
+      if (Config.GRAPH_DB_ENABLED === "true" && records.length > 0 && !isCacheHitOnly) {
         const regionInfo = { lawdCode: lawdCodes.length > 0 ? lawdCodes[0] : lawdCode, displayName: regionDisplayName };
         const batchItems: BatchUpsertItem[] = records.map(rec => {
           const rawObj = (rec as any).raw && typeof (rec as any).raw === "object" ? (rec as any).raw as Record<string, unknown> : {};
@@ -396,7 +401,7 @@ export function createRouter() {
     }
   });
 
-  router.get("/transactions/batch", async (req, res, next) => {
+  router.get("/transactions/batch", validateQuery(transactionQuerySchema), async (req, res, next) => {
     try {
       const { lawdCode, startMonth, endMonth } = req.query as Record<string, string>;
       
@@ -423,7 +428,14 @@ export function createRouter() {
 
   router.get("/rules", async (req, res, next) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const state = await readStateForUser(email);
       res.json(state.rules);
     } catch (error) {
@@ -431,9 +443,16 @@ export function createRouter() {
     }
   });
 
-  router.post("/rules", async (req, res, next) => {
+  router.post("/rules", validateBody(ruleSchema), async (req, res, next) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const input = ruleSchema.parse(req.body) satisfies RuleInput;
       const rule = await upsertRule(input, undefined, email);
       res.status(201).json(rule);
@@ -442,11 +461,18 @@ export function createRouter() {
     }
   });
 
-  router.patch("/rules/:id", async (req, res, next) => {
+  router.patch("/rules/:id", validateBody(ruleUpdateSchema), async (req, res, next) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const parsedBody = ruleUpdateSchema.parse(req.body);
-      const rule = await updateRulePatch(req.params.id, parsedBody, email);
+      const rule = await updateRulePatch(req.params.id as string, parsedBody, email);
       if (!rule) {
         res.status(404).json({ error: "Rule not found" });
         return;
@@ -459,7 +485,14 @@ export function createRouter() {
 
   router.delete("/rules/:id", async (req, res, next) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const deleted = await deleteRule(req.params.id, email);
       if (!deleted) {
         res.status(404).json({ error: "Rule not found" });
@@ -473,7 +506,14 @@ export function createRouter() {
 
   router.post("/rules/:id/run", async (req, res, next) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const state = await readStateForUser(email);
       const rule = state.rules.find((item) => item.id === req.params.id);
       if (!rule) {
@@ -490,7 +530,14 @@ export function createRouter() {
 
   router.get("/check-runs", async (req, res, next) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const state = await readStateForUser(email);
       res.json(state.checkRuns);
     } catch (error) {
@@ -500,7 +547,14 @@ export function createRouter() {
 
   router.delete("/check-runs/:id", async (req, res, next) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const deleted = await deleteCheckRun(req.params.id, email);
       if (!deleted) {
         res.status(404).json({ error: "Check run not found" });
@@ -514,7 +568,14 @@ export function createRouter() {
 
   router.get("/notifications", async (req, res, next) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const state = await readStateForUser(email);
       res.json(state.notifications);
     } catch (error) {
@@ -572,7 +633,14 @@ export function createRouter() {
 
   router.get("/user-config", async (req, res, next) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const settings = getUserSettings(email);
       res.json({
         telegramBotToken: settings?.telegramBotToken ? "●●●●●●●●" : "",
@@ -584,9 +652,16 @@ export function createRouter() {
     }
   });
 
-  router.post("/user-config", async (req, res, next) => {
+  router.post("/user-config", validateBody(userConfigUpdateSchema), async (req, res, next) => {
     try {
-      const email = req.user?.email || "bootstrap-admin@myhome.local";
+      let email = req.user?.email;
+if (!email) {
+  if (Config.ENABLE_BOOTSTRAP_ADMIN === "true") {
+    email = "bootstrap-admin@myhome.local";
+  } else {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+}
       const body = req.body;
       const update: { telegramBotToken?: string | null; telegramChatId?: string | null; kakaoRestApiKey?: string | null } = {};
 

@@ -165,6 +165,16 @@ export function initDb(): void {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS alerted_transactions (
+      user_email TEXT NOT NULL,
+      rule_id TEXT NOT NULL,
+      dedupe_key TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (user_email, rule_id, dedupe_key)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_alerted_transactions_created_at ON alerted_transactions(created_at);
+
     CREATE TABLE IF NOT EXISTS user_activity_logs (
       id TEXT PRIMARY KEY,
       user_email TEXT NOT NULL,
@@ -1876,6 +1886,16 @@ export function getCheckRunsByEmail(email: string): any[] {
   });
 }
 
+export function getAlertedDedupeKeys(email: string, ruleId: string): string[] {
+  const db = getDb();
+  const rows = db.prepare(`
+    SELECT dedupe_key AS dedupeKey
+    FROM alerted_transactions
+    WHERE user_email = ? AND rule_id = ?
+  `).all(email, ruleId) as { dedupeKey: string }[];
+  return rows.map(r => r.dedupeKey);
+}
+
 export function appendCheckRunDb(email: string, run: any, alertedDedupeKeys: string[]): void {
   const db = getDb();
   const user = getUserSettings(email);
@@ -1911,10 +1931,25 @@ export function appendCheckRunDb(email: string, run: any, alertedDedupeKeys: str
       UPDATE rules SET last_checked_at = ?, updated_at = ? WHERE id = ?
     `).run(run.createdAt, run.createdAt, run.ruleId);
 
-    // 3. user_settings의 alerted_dedupe_keys 갱신
+    // 3. user_settings의 alerted_dedupe_keys 갱신 (기존 호환 유지)
     db.prepare(`
       UPDATE user_settings SET alerted_dedupe_keys = ? WHERE email = ?
     `).run(JSON.stringify(mergedKeys), email);
+
+    // 3-1. alerted_transactions에 신규 중복 방지 키 삽입
+    const insertAlertedStmt = db.prepare(`
+      INSERT OR IGNORE INTO alerted_transactions (user_email, rule_id, dedupe_key, created_at)
+      VALUES (?, ?, ?, ?)
+    `);
+    for (const key of alertedDedupeKeys) {
+      insertAlertedStmt.run(email, run.ruleId, key, run.createdAt);
+    }
+
+    // 3-2. 90일 지난 오래된 alerted_transactions 데이터 삭제
+    const ninetyDaysAgo = new Date(new Date(run.createdAt).getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    db.prepare(`
+      DELETE FROM alerted_transactions WHERE created_at < ?
+    `).run(ninetyDaysAgo);
 
     // 4. 오래된 check_runs 삭제 (최근 100개 유지)
     db.prepare(`
