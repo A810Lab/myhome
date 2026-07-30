@@ -1,3 +1,4 @@
+import "./env.js";
 import { existsSync, readFileSync } from "node:fs";
 import express from "express";
 import { createRouter } from "./routes.js";
@@ -8,29 +9,10 @@ import { initDb, closeGraphDb, cleanExpiredSessions } from "@myhome/shared";
 import { createAuthRouter, authMiddleware, adminRequired } from "./authRoutes.js";
 
 import { join, dirname } from "node:path";
-import { Config } from "./config.js";
+import { Config, validateRequiredConfig } from "./config.js";
 
-function findAndLoadEnv() {
-  let currentDir = process.cwd();
-  // tsx watch 등으로 실행되는 파일 디렉토리 기준으로도 탐색할 수 있도록 __dirname 지원
-  const fileDir = dirname(new URL(import.meta.url).pathname).replace(/^\/([a-zA-Z]:)/, '$1'); // Windows drive letter 정규화
-  
-  const dirsToSearch = [currentDir, fileDir];
-  for (let startDir of dirsToSearch) {
-    let dir = startDir;
-    while (true) {
-      const envPath = join(dir, ".env");
-      if (existsSync(envPath)) {
-        process.loadEnvFile(envPath);
-        return;
-      }
-      const parent = dirname(dir);
-      if (parent === dir) break;
-      dir = parent;
-    }
-  }
-}
-findAndLoadEnv();
+// .env 로드 후 즉시 필수 환경변수 검증 — 누락 시 경고 출력, 인증 설정 전무 시 즉시 종료
+validateRequiredConfig();
 
 function findAndLoadYamlPort(): number | null {
   let currentDir = process.cwd();

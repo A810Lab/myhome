@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from "express";
 export const validateBody = (schema: ZodSchema<any>) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     try {
-      req.body = schema.parse(req.body);
+      req.body = schema.parse(req.body || {});
       next();
     } catch (err) {
       next(err);
@@ -18,7 +18,10 @@ export const validateQuery = (schema: ZodSchema<any>) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     try {
       const parsed = schema.parse(req.query);
-      req.query = parsed as any;
+      for (const key in req.query) {
+        delete req.query[key];
+      }
+      Object.assign(req.query, parsed);
       next();
     } catch (err) {
       next(err);

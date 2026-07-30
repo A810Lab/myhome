@@ -9,7 +9,9 @@
     "dev:server": "tsx watch server/index.ts",
     "build": "tsc -p tsconfig.json && vite build && tsc -p tsconfig.node.json",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
-    "start:server": "tsx server/index.ts"
+    "start:server": "tsx server/index.ts",
+    "test": "node --import tsx/esm --test server/mcpThrottle.test.ts && node --import tsx/esm --test server/validation.test.ts && node --import tsx/esm --test server/storage.test.ts && node --import tsx/esm --test server/ruleEngine.test.ts",
+    "test:watch": "node --import tsx/esm --test --watch server/*.test.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

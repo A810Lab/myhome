@@ -255,9 +255,8 @@ export async function runCollector(): Promise<{ totalCollected: number; totalUps
 
 // 직접 실행 여부 판별
 const isMain = process.argv[1] && (
-  process.argv[1].endsWith("collector/dist/index.js") || 
-  process.argv[1].endsWith("collector/src/index.ts") ||
-  process.argv[1].endsWith("index.ts")
+  process.argv[1].replace(/\\/g, "/").endsWith("packages/collector/dist/index.js") || 
+  process.argv[1].replace(/\\/g, "/").endsWith("packages/collector/src/index.ts")
 );
 
 if (isMain) {

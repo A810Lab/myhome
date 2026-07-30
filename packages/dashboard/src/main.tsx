@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./styles.css";
 import { applySavedDisplayPreferences } from "./lib/displayPreferences";
+import { LocaleProvider } from "./LocaleProvider";
 
 // 초기 화면 표시(폰트, 크기, 주조색) 환경 설정 적용
 applySavedDisplayPreferences();
@@ -20,7 +21,9 @@ if (isDark) {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <LocaleProvider>
+      <App />
+    </LocaleProvider>
   </React.StrictMode>
 );
 

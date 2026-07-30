@@ -25,6 +25,9 @@ const backupPath = path.join(dataDir, "app-state.json.bak");
 
 const DEFAULT_EMAIL = "bootstrap-admin@myhome.local";
 
+// 동시 호출 방지용 싱글턴 Promise — 동일 프로세스 내에서 migrateJsonToDb가 한 번만 실행되도록 보장
+let migrationPromise: Promise<void> | null = null;
+
 // 기존 JSON 파일 존재 시 SQLite DB로 1회 마이그레이션 수행
 export async function migrateJsonToDb() {
   try {
@@ -115,8 +118,9 @@ export async function migrateJsonToDb() {
   }
 }
 
-// 기동 시 마이그레이션 비동기 실행
-void migrateJsonToDb();
+// 기동 시 마이그레이션 비동기 실행 (동시 호출 방지: 이미 실행 중이면 동일 Promise 재사용)
+migrationPromise ??= migrateJsonToDb();
+void migrationPromise;
 
 // 하위 호환성용 - 단일 테넌트 및 백그라운드 구동 시 기본 계정 기준으로 조회
 export async function readState(): Promise<AppState> {

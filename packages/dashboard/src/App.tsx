@@ -14,8 +14,10 @@ import { AllowedAccountsPage } from "./pages/AllowedAccountsPage";
 import { ActivityLogPage } from "./pages/ActivityLog";
 import { TempPasswordResetModal } from "./components/TempPasswordResetModal";
 import type { DashboardState } from "./types";
+import { useLocale } from "./lib/i18n";
 
 function App() {
+  const { t } = useLocale();
   const [auth, setAuth] = useState<{ isAuthenticated: boolean; email?: string; isAdmin?: boolean; isTemporaryPassword?: boolean } | null>(null);
   const [state, setState] = useState<DashboardState | undefined>();
   const [error, setError] = useState("");
@@ -91,7 +93,7 @@ function App() {
     try {
       setState(await loadDashboard());
     } catch (err) {
-      setError(err instanceof Error ? err.message : "대시보드를 불러오지 못했습니다.");
+      setError(err instanceof Error ? err.message : t.searchFailed);
     }
   }
 
@@ -113,16 +115,16 @@ function App() {
   useEffect(() => {
     if (auth?.isAuthenticated && view) {
       const viewNames: Record<View, string> = {
-        dashboard: "대시보드",
-        rules: "알림 규칙",
-        settings: "환경 설정",
-        analytics: "종합 현황",
-        complexAnalysis: "단지 분석",
-        dbAdmin: "데이터베이스 관리",
-        collect: "수집 현황",
-        nearby: "역세권 분석",
-        allowedAccounts: "계정 관리",
-        activityLog: "활동 로그"
+        dashboard: t.dashboardTitle,
+        rules: t.rulesTitle,
+        settings: t.settingsTitle,
+        analytics: t.analyticsTitle,
+        complexAnalysis: t.analyticsTabComplex,
+        dbAdmin: t.dbAdminTitle,
+        collect: t.collectReportTitle,
+        nearby: t.nearbyStationTitle,
+        allowedAccounts: t.allowedAccountsTitle,
+        activityLog: t.activityLogTitle,
       };
       const name = viewNames[view] || view;
       void logActivity("page_view", `${name} 페이지 조회`, { view });
@@ -155,7 +157,7 @@ function App() {
   if (auth === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-alternative text-neutral">
-        <span className="text-sm font-medium">인증 상태를 확인하는 중...</span>
+        <span className="text-sm font-medium">{t.loading}</span>
       </div>
     );
   }
