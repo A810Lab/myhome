@@ -318,7 +318,7 @@ function RuleForm({
               <label className="space-y-1.5 sm:col-span-2">
                 <span className="text-sm font-semibold text-strong">{t.ruleName}</span>
                 <input
-                  className="w-full rounded-lg border border-normal bg-normal px-4 py-2.5 text-sm text-strong focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  className="h-8 w-full rounded-lg border border-normal bg-normal px-2.5 text-xs text-strong focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                   value={form.name}
                   onChange={(event) => setForm({ ...form, name: event.target.value })}
                   placeholder={t.ruleNamePlaceholder}
@@ -332,6 +332,7 @@ function RuleForm({
                       value={form.regionName}
                       onChange={(value) => setForm({ ...form, regionName: value })}
                       onSelect={selectRegion}
+                      className="h-8 w-full rounded-lg border border-normal bg-normal px-2.5 text-xs text-strong focus:border-primary outline-none"
                     />
                     {resolvedRegionName && lawdCode && (
                       <p className="flex items-center gap-1 text-[10px] text-primary font-semibold mt-0.5">
@@ -345,9 +346,9 @@ function RuleForm({
                     type="button"
                     onClick={handleSearch}
                     disabled={searching || !form.regionName.trim()}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2 shadow-sm shadow-blue-500/20"
+                    className="h-8 rounded-lg bg-primary px-3 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-1.5 shadow-sm shadow-blue-500/20"
                   >
-                    {searching ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    {searching ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
                     {t.searchButton}
                   </button>
                 </div>

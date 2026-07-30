@@ -344,6 +344,19 @@ export default function FilterPanel({
     setRegionText(regionName || "");
   }, [regionName]);
 
+  // filter.lawdCode가 설정되었으나 regionText 또는 regionName이 비어있을 때 dbRegions에서 찾아 동기화
+  useEffect(() => {
+    if (!hideComplexSearch && filter.lawdCode && dbRegions.length > 0) {
+      const found = dbRegions.find((r) => r.lawdCode === filter.lawdCode);
+      if (found) {
+        setRegionText(found.displayName);
+        if (regionName !== found.displayName) {
+          onFilterChange(filter, found.displayName);
+        }
+      }
+    }
+  }, [filter.lawdCode, dbRegions, regionName, hideComplexSearch, onFilterChange, filter]);
+
   useEffect(() => {
     setComplexName(filter.complexName || "");
   }, [filter.complexName]);
@@ -472,7 +485,7 @@ export default function FilterPanel({
         minArea: minArea ? Number(minArea) : undefined,
         maxArea: maxArea ? Number(maxArea) : undefined,
       };
-      onFilterChange(nextFilter, regionName);
+      onFilterChange(nextFilter, regionText);
     }
     onApply(nextFilter);
   };
@@ -683,7 +696,7 @@ export default function FilterPanel({
                           handleLoadPreset(val);
                         }
                       }}
-                      className="bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary w-24 md:w-32"
+                      className="h-8 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary w-24 md:w-32"
                     >
                       <option value="">{t.presetSelectOverview}</option>
                       {presets.map((p) => (
@@ -696,7 +709,7 @@ export default function FilterPanel({
                       type="button"
                       onClick={() => setShowPresetModal(true)}
                       title={t.presetSaveBtn}
-                      className="p-2 rounded-lg border border-normal bg-normal text-neutral hover:text-strong transition shrink-0"
+                      className="h-8 w-8 flex items-center justify-center rounded-lg border border-normal bg-normal text-neutral hover:text-strong transition shrink-0"
                     >
                       <Save size={13} />
                     </button>
@@ -705,7 +718,7 @@ export default function FilterPanel({
                         type="button"
                         onClick={(e) => handleDeletePreset(selectedPresetId, e)}
                         title="프리셋 삭제"
-                        className="p-2 rounded-lg border border-normal bg-normal text-warn hover:bg-warn/10 transition shrink-0"
+                        className="h-8 w-8 flex items-center justify-center rounded-lg border border-normal bg-normal text-warn hover:bg-warn/10 transition shrink-0"
                       >
                         <X size={13} />
                       </button>
@@ -719,7 +732,7 @@ export default function FilterPanel({
                   <button
                     type="button"
                     onClick={() => setShowRegionDropdown(!showRegionDropdown)}
-                    className="w-full bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary text-left flex items-center justify-between h-[30px]"
+                    className="w-full h-8 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary text-left flex items-center justify-between"
                   >
                     <span className="truncate">{getSelectedRegionsText()}</span>
                     <ChevronDown size={14} className="text-neutral shrink-0 ml-1" />
@@ -801,7 +814,7 @@ export default function FilterPanel({
                       setStartDate(e.target.value);
                       setPeriod('custom');
                     }}
-                    className="w-full md:w-32 bg-normal border border-normal rounded-lg px-2 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="h-8 w-full md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                   <span className="text-assistive font-semibold text-xs">~</span>
                   <input
@@ -811,7 +824,7 @@ export default function FilterPanel({
                       setEndDate(e.target.value);
                       setPeriod('custom');
                     }}
-                    className="w-full md:w-32 bg-normal border border-normal rounded-lg px-2 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="h-8 w-full md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
               </div>
@@ -823,7 +836,7 @@ export default function FilterPanel({
                   <button
                     type="button"
                     onClick={() => handlePeriodBadgeClick(1)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                       period === '1year' 
                         ? "bg-primary text-white border-primary" 
                         : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -834,7 +847,7 @@ export default function FilterPanel({
                   <button
                     type="button"
                     onClick={() => handlePeriodBadgeClick(2)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                       period === '2year' 
                         ? "bg-primary text-white border-primary" 
                         : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -845,7 +858,7 @@ export default function FilterPanel({
                   <button
                     type="button"
                     onClick={() => handlePeriodBadgeClick(3)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                       period === '3year' 
                         ? "bg-primary text-white border-primary" 
                         : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -861,7 +874,7 @@ export default function FilterPanel({
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="flex-1 md:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 bg-alternative hover:bg-alternative/80 text-neutral hover:text-strong text-xs font-bold rounded-lg transition-colors border border-normal"
+                  className="flex-1 md:flex-initial flex items-center justify-center gap-1 h-8 px-3 bg-alternative hover:bg-alternative/80 text-neutral hover:text-strong text-xs font-bold rounded-lg transition-colors border border-normal"
                 >
                   <RotateCcw size={12} />
                   <span>{t.buttonReset}</span>
@@ -869,7 +882,7 @@ export default function FilterPanel({
                 <button
                   type="button"
                   onClick={handleApply}
-                  className="flex-1 md:flex-initial flex items-center justify-center gap-1 px-4 py-1.5 bg-primary hover:opacity-90 text-white text-xs font-bold rounded-lg shadow-sm shadow-primary/20 transition-opacity"
+                  className="flex-1 md:flex-initial flex items-center justify-center gap-1 h-8 px-4 bg-primary hover:opacity-90 text-white text-xs font-bold rounded-lg shadow-sm shadow-primary/20 transition-opacity"
                 >
                   <Play size={12} />
                   <span>{t.buttonApply}</span>
@@ -898,7 +911,7 @@ export default function FilterPanel({
                             handleLoadPreset(val);
                           }
                         }}
-                        className="bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary w-24 md:w-32"
+                        className="h-8 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary w-24 md:w-32"
                       >
                         <option value="">{t.presetSelectAnalysis}</option>
                         {presets.map((p) => (
@@ -911,7 +924,7 @@ export default function FilterPanel({
                         type="button"
                         onClick={() => setShowPresetModal(true)}
                         title={t.presetSaveBtn}
-                        className="p-2 rounded-lg border border-normal bg-normal text-neutral hover:text-strong transition shrink-0"
+                        className="h-8 w-8 flex items-center justify-center rounded-lg border border-normal bg-normal text-neutral hover:text-strong transition shrink-0"
                       >
                         <Save size={13} />
                       </button>
@@ -920,7 +933,7 @@ export default function FilterPanel({
                           type="button"
                           onClick={(e) => handleDeletePreset(selectedPresetId, e)}
                           title="프리셋 삭제"
-                          className="p-2 rounded-lg border border-normal bg-normal text-warn hover:bg-warn/10 transition shrink-0"
+                          className="h-8 w-8 flex items-center justify-center rounded-lg border border-normal bg-normal text-warn hover:bg-warn/10 transition shrink-0"
                         >
                           <X size={13} />
                         </button>
@@ -934,7 +947,7 @@ export default function FilterPanel({
                     <button
                       type="button"
                       onClick={() => setShowAnalysisRegionDropdown(!showAnalysisRegionDropdown)}
-                      className="w-full bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary text-left flex items-center justify-between h-[30px]"
+                      className="w-full h-8 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary text-left flex items-center justify-between"
                     >
                       <span className="truncate">{regionText || "지역 선택 (선택 없음)"}</span>
                       <ChevronDown size={14} className="text-neutral shrink-0 ml-1" />
@@ -1010,7 +1023,7 @@ export default function FilterPanel({
                     }}
                     onBlur={() => setTimeout(() => { setShowSuggestions(false); setActiveIndex(-1); }, 150)}
                     placeholder={filter.lawdCode ? t.complexPlaceholderWithCode : t.complexPlaceholderNoCode}
-                    className="w-full bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong placeholder-assistive focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="h-8 w-full bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong placeholder-assistive focus:outline-none focus:ring-1 focus:ring-primary"
                     autoComplete="off"
                   />
 
@@ -1051,7 +1064,7 @@ export default function FilterPanel({
                       placeholder={usePyung ? t.areaMinPlaceholderPyung : t.areaMinPlaceholderM2}
                       value={usePyung ? toPyung(minArea) : minArea}
                       onChange={(e) => handleAreaChange(e.target.value, "min")}
-                      className="w-full bg-normal border border-normal rounded-lg px-2 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="h-8 w-full bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                     <span className="text-assistive font-semibold text-xs">~</span>
                     <input
@@ -1059,7 +1072,7 @@ export default function FilterPanel({
                       placeholder={usePyung ? t.areaMaxPlaceholderPyung : t.areaMaxPlaceholderM2}
                       value={usePyung ? toPyung(maxArea) : maxArea}
                       onChange={(e) => handleAreaChange(e.target.value, "max")}
-                      className="w-full bg-normal border border-normal rounded-lg px-2 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="h-8 w-full bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                 </div>
@@ -1079,7 +1092,7 @@ export default function FilterPanel({
                           setStartDate(e.target.value);
                           setPeriod('custom');
                         }}
-                        className="w-full md:w-32 bg-normal border border-normal rounded-lg px-2 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="h-8 w-full md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
                       />
                       <span className="text-assistive font-semibold text-xs">~</span>
                       <input
@@ -1089,7 +1102,7 @@ export default function FilterPanel({
                           setEndDate(e.target.value);
                           setPeriod('custom');
                         }}
-                        className="w-full md:w-32 bg-normal border border-normal rounded-lg px-2 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="h-8 w-full md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
                       />
                     </div>
                   </div>
@@ -1101,7 +1114,7 @@ export default function FilterPanel({
                       <button
                         type="button"
                         onClick={() => handlePeriodBadgeClick(1)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                        className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                           period === '1year' 
                             ? "bg-primary text-white border-primary" 
                             : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -1112,7 +1125,7 @@ export default function FilterPanel({
                       <button
                         type="button"
                         onClick={() => handlePeriodBadgeClick(2)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                        className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                           period === '2year' 
                             ? "bg-primary text-white border-primary" 
                             : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -1123,7 +1136,7 @@ export default function FilterPanel({
                       <button
                         type="button"
                         onClick={() => handlePeriodBadgeClick(3)}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                        className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                           period === '3year' 
                             ? "bg-primary text-white border-primary" 
                             : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -1140,7 +1153,7 @@ export default function FilterPanel({
                   <button
                     type="button"
                     onClick={handleReset}
-                    className="flex-1 md:flex-initial flex items-center justify-center gap-1 px-3 py-1.5 bg-alternative hover:bg-alternative/80 text-neutral hover:text-strong text-xs font-bold rounded-lg transition-colors border border-normal"
+                    className="flex-1 md:flex-initial flex items-center justify-center gap-1 h-8 px-3 bg-alternative hover:bg-alternative/80 text-neutral hover:text-strong text-xs font-bold rounded-lg transition-colors border border-normal"
                   >
                     <RotateCcw size={12} />
                     <span>{t.buttonReset}</span>
@@ -1148,7 +1161,7 @@ export default function FilterPanel({
                   <button
                     type="button"
                     onClick={handleApply}
-                    className="flex-1 md:flex-initial flex items-center justify-center gap-1 px-4 py-1.5 bg-primary hover:opacity-90 text-white text-xs font-bold rounded-lg shadow-sm shadow-primary/20 transition-opacity"
+                    className="flex-1 md:flex-initial flex items-center justify-center gap-1 h-8 px-4 bg-primary hover:opacity-90 text-white text-xs font-bold rounded-lg shadow-sm shadow-primary/20 transition-opacity"
                   >
                     <Play size={12} />
                     <span>{t.buttonApply}</span>
