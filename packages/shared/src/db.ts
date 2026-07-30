@@ -629,10 +629,18 @@ export async function getComplexDetail(
     };
   }).sort((a, b) => a.floor - b.floor);
 
-  const trend = Array.from(monthlyMap.entries()).map(([month, prices]) => ({
-    month,
-    avgPriceEok: Number((prices.reduce((sum, val) => sum + val, 0) / prices.length).toFixed(2))
-  })).sort((a, b) => a.month.localeCompare(b.month));
+  const trend = Array.from(monthlyMap.entries()).map(([month, prices]) => {
+    const stats = calculateBoxPlot(prices);
+    return {
+      month,
+      거래량: prices.length,
+      최대가: Number(stats.max.toFixed(2)),
+      최소가: Number(stats.min.toFixed(2)),
+      평균가: Number(stats.mean.toFixed(2)),
+      중위값: Number(stats.median.toFixed(2)),
+      overall: Number(stats.mean.toFixed(2)) // 하위 호환
+    };
+  }).sort((a, b) => a.month.localeCompare(b.month));
 
   return {
     trend,
@@ -678,12 +686,11 @@ export async function searchComplexNames(
 
   let queryStr = `
     SELECT DISTINCT c.id, c.name, c.lawd_code AS lawdCode, r.display_name AS regionName, c.lat, c.lng
-    FROM complexes_fts fts
-    JOIN complexes c ON fts.complex_id = c.id
+    FROM complexes c
     JOIN regions r ON c.lawd_code = r.lawd_code
-    WHERE complexes_fts MATCH ?
+    WHERE c.name LIKE ?
   `;
-  const params: any[] = [`*${query.trim()}*`];
+  const params: any[] = [`%${query.trim()}%`];
   if (lawdCode) {
     queryStr += ` AND c.lawd_code LIKE ? || '%'`;
     params.push(lawdCode);
