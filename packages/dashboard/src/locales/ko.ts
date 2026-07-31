@@ -312,6 +312,8 @@ export const copy = {
     centerToStation: "지하철역 중심으로",
     geocodeStatsBtn: "좌표 캐싱 설정",
     geocodeStatsTitle: "Geocoding 좌표 캐싱 관리",
+    geocodePendingListTitle: "위경도 좌표가 없는 단지 목록",
+    noGeocodePendingComplexes: "위경도 좌표가 없는 단지가 없습니다.",
     noNearbyComplexes: "반경 이내에 등록된 아파트 단지가 없습니다.",
     geocodePercentageOfTotal: "좌표 데이터 현황",
     geocodeRequiredDesc: "현재 DB에 등록된 아파트 중 {pending}개 단지의 위도·경도 좌표가 없습니다. 검색 속도 향상을 위해 국토부 지번 주소 기반으로 카카오 Geocoding 일괄 수집을 실행할 수 있습니다.",
@@ -357,6 +359,8 @@ export const copy = {
     allTypes: "전체 유형",
     noActivityLogs: "기록된 활동 로그가 없습니다.",
     activityTrends: "최근 활동 추이 (14일)",
+    activityVolume: "활동량 (로그 수)",
+    activeUsers: "액티브 사용자 (명)",
     activityDistribution: "활동 유형별 분포",
     payload: "추가 정보",
     viewPayload: "상세 데이터",
@@ -413,7 +417,15 @@ export const copy = {
     mapCollectPromptCancel: "취소",
     mapCollectSuccess: "성공적으로 실거래 데이터가 집계되었습니다.",
     mapCollectFailed: "실거래 수집에 실패했습니다.",
-    mapCollecting: "국토부 실거래 수집 중..."
+    mapCollecting: "국토부 실거래 수집 중...",
+    collectProgressTitle: "실거래 데이터 수집 진행 상황",
+    collectProgressStatus: "집계 중",
+    collectingProgressText: "실거래 수집 중",
+    stopBtn: "중단",
+    progressStatsTitle: "진행 수치",
+    collectFailuresTitle: "실거래 수집 실패 목록",
+    monthLabel: "대상월",
+    reasonLabel: "실패 사유"
   },
   en: {
     // Navigation / Breadcrumb Parents
@@ -723,6 +735,8 @@ export const copy = {
     centerToStation: "Center to Station",
     geocodeStatsBtn: "Coordinate Cache Settings",
     geocodeStatsTitle: "Geocoding Cache Administration",
+    geocodePendingListTitle: "Complexes without Coordinates",
+    noGeocodePendingComplexes: "All complexes have coordinates.",
     noNearbyComplexes: "No registered apartment complexes within this radius.",
     geocodePercentageOfTotal: "Coordinate Data Status",
     geocodeRequiredDesc: "Currently, there are no latitude/longitude coordinates for {pending} complexes among the apartments registered in the DB. To improve search speed, you can execute Kakao Geocoding batch collection based on land lot addresses.",
@@ -768,6 +782,8 @@ export const copy = {
     allTypes: "All Types",
     noActivityLogs: "No activity logs recorded.",
     activityTrends: "Recent Activity Trends (14 days)",
+    activityVolume: "Activity Volume (Logs)",
+    activeUsers: "Active Users (People)",
     activityDistribution: "Activity Distribution",
     payload: "Payload",
     viewPayload: "View Details",
@@ -824,7 +840,15 @@ export const copy = {
     mapCollectPromptCancel: "Cancel",
     mapCollectSuccess: "Transaction data successfully collected.",
     mapCollectFailed: "Failed to collect transaction data.",
-    mapCollecting: "Collecting real transactions from MOLIT API..."
+    mapCollecting: "Collecting real transactions from MOLIT API...",
+    collectProgressTitle: "Transaction Data Collection Progress",
+    collectProgressStatus: "Collecting",
+    collectingProgressText: "Collecting Transactions",
+    stopBtn: "Stop",
+    progressStatsTitle: "Progress Metrics",
+    collectFailuresTitle: "Transaction Collection Failures",
+    monthLabel: "Target Month",
+    reasonLabel: "Failure Reason"
   }
 } as const;
 

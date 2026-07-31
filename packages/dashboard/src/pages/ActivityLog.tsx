@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Activity, ShieldAlert, CheckCircle, Search, Calendar, ChevronLeft, ChevronRight, Eye, RefreshCw, X, User, Users, UserCheck, Database } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
+import { ResponsiveContainer, ComposedChart, Area, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, Legend } from "recharts";
 import { useBreakpoint } from "../useBreakpoint";
 import { SectionCard } from "../components/SectionCard";
 import { StatCard } from "../components/StatCard";
@@ -10,6 +10,41 @@ import { copy } from "../locales/ko";
 
 const locale = (typeof navigator !== "undefined" && navigator.language.startsWith("ko")) ? "ko" : "en";
 const t = copy[locale];
+
+const CustomLegend = (props: any) => {
+  const { payload } = props;
+  if (!payload) return null;
+
+  const leftItem = payload.find((item: any) => item.dataKey === "logCount");
+  const rightItem = payload.find((item: any) => item.dataKey === "userCount");
+
+  return (
+    <div className="flex justify-between items-center w-full px-1 pb-3">
+      {leftItem && (
+        <div className="flex items-center gap-1.5">
+          <span 
+            className="w-2 h-2 rounded-full" 
+            style={{ backgroundColor: leftItem.color }} 
+          />
+          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+            {leftItem.value}
+          </span>
+        </div>
+      )}
+      {rightItem && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+            {rightItem.value}
+          </span>
+          <span 
+            className="w-2.5 h-2.5 rounded-sm" 
+            style={{ backgroundColor: rightItem.color }} 
+          />
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Chart colors tailwind compatible
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#6b7280"];
@@ -225,7 +260,7 @@ export function ActivityLogPage() {
             ) : (
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={areaChartData} margin={{ top: 10, right: 5, left: -10, bottom: 0 }}>
+                  <ComposedChart data={areaChartData} margin={{ top: 10, right: 5, left: -10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorLogCount" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
@@ -252,17 +287,11 @@ export function ActivityLogPage() {
                     <Legend
                       verticalAlign="top"
                       height={36}
-                      iconType="circle"
-                      iconSize={8}
-                      formatter={(value) => (
-                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                          {value}
-                        </span>
-                      )}
+                      content={<CustomLegend />}
                     />
-                    <Area yAxisId="left" type="monotone" dataKey="logCount" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorLogCount)" name="활동량 (로그 수)" />
-                    <Area yAxisId="right" type="monotone" dataKey="userCount" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorUserCount)" name="액티브 사용자 (명)" />
-                  </AreaChart>
+                    <Area yAxisId="left" type="monotone" dataKey="logCount" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorLogCount)" name={t.activityVolume || "활동량 (로그 수)"} />
+                    <Bar yAxisId="right" dataKey="userCount" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={20} name={t.activeUsers || "액티브 사용자 (명)"} />
+                  </ComposedChart>
                 </ResponsiveContainer>
               </div>
             )}

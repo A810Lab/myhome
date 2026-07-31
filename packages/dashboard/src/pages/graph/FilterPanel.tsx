@@ -133,6 +133,19 @@ export default function FilterPanel({
   const [minArea, setMinArea] = useState(filter.minArea !== undefined ? String(filter.minArea) : "");
   const [maxArea, setMaxArea] = useState(filter.maxArea !== undefined ? String(filter.maxArea) : "");
   const [selectedRegions, setSelectedRegions] = useState<Array<{ lawdCode: string; regionName: string }>>(() => {
+    if (hideComplexSearch) {
+      const saved = localStorage.getItem("myhome_selected_regions");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        } catch (e) {
+          console.error("Failed to parse saved regions", e);
+        }
+      }
+    }
     if (filter.lawdCodes && filter.lawdCodes.length > 0) {
       return filter.lawdCodes.map((code) => ({ lawdCode: code, regionName: '' }));
     }
@@ -360,6 +373,21 @@ export default function FilterPanel({
   useEffect(() => {
     setComplexName(filter.complexName || "");
   }, [filter.complexName]);
+
+  // selectedRegions 변경 시 localStorage에 저장 (종합 현황 모드일 때만)
+  useEffect(() => {
+    if (!hideComplexSearch) return;
+    if (selectedRegions.length > 0) {
+      const cleaned = selectedRegions.map(r => {
+        if (r.regionName) return r;
+        const found = dbRegions.find(db => db.lawdCode === r.lawdCode);
+        return { lawdCode: r.lawdCode, regionName: found ? found.displayName : "" };
+      });
+      localStorage.setItem("myhome_selected_regions", JSON.stringify(cleaned));
+    } else {
+      localStorage.removeItem("myhome_selected_regions");
+    }
+  }, [selectedRegions, hideComplexSearch, dbRegions]);
 
   // 평형 <-> ㎡ 단위 토글을 위한 상태
   const [usePyung, setUsePyung] = useState(false);

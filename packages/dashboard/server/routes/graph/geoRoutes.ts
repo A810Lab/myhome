@@ -7,6 +7,7 @@ import {
   upsertTransactionBatch,
   getGeocodeStats,
   mapLimit,
+  getComplexesMissingCoords,
   type BatchUpsertItem
 } from "@myhome/shared";
 import {
@@ -156,6 +157,12 @@ router.post("/geocode-batch", asyncHandler(async (req, res) => {
 router.get("/geocode-stats", asyncHandler(async (_req, res) => {
   const stats = getGeocodeStats();
   res.json(stats);
+}));
+
+/** GET /api/graph/geocode-pending — 위경도 좌표가 없는 단지 목록 */
+router.get("/geocode-pending", asyncHandler(async (_req, res) => {
+  const list = getComplexesMissingCoords();
+  res.json(list);
 }));
 
 export default router;

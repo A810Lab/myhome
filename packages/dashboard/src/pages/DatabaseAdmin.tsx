@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useBreakpoint } from "../useBreakpoint";
-import { loadAdminDbTables, executeAdminDbQuery, searchComplexNames, clearDatabase, deleteDbRegion, deleteDbComplex, loadGeocodeStats, triggerGeocodeBatch, updateComplexCoords, resetComplexCoords } from "../api";
+import { loadAdminDbTables, executeAdminDbQuery, searchComplexNames, clearDatabase, deleteDbRegion, deleteDbComplex, loadGeocodeStats, triggerGeocodeBatch, updateComplexCoords, resetComplexCoords, loadGeocodePending } from "../api";
 import { SectionCard } from "../components/SectionCard";
 import { Play, Database, RefreshCw, AlertCircle, CheckCircle2, ChevronRight, FileText, Settings, Building2, MapPin } from "lucide-react";
 import { copy } from "../locales/ko";
@@ -85,6 +85,10 @@ export function DatabaseAdminPage() {
   const [shouldStopBatch, setShouldStopBatch] = useState(false);
   const shouldStopRef = useRef(false);
 
+  // 위경도 좌표가 없는 단지 리스트 상태
+  const [pendingComplexes, setPendingComplexes] = useState<any[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+
   // Geocoding 통계 조회
   const fetchGeocodeStats = async () => {
     try {
@@ -95,8 +99,22 @@ export function DatabaseAdminPage() {
     }
   };
 
+  // 위경도 좌표가 없는 단지 리스트 조회
+  const fetchPendingComplexes = async () => {
+    setLoadingPending(true);
+    try {
+      const list = await loadGeocodePending();
+      setPendingComplexes(list);
+    } catch (err) {
+      console.error("Failed to load geocode pending complexes", err);
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
   useEffect(() => {
     fetchGeocodeStats();
+    fetchPendingComplexes();
   }, []);
 
   const geocodePercentage = useMemo(() => {
@@ -194,6 +212,7 @@ export function DatabaseAdminPage() {
     });
 
     await fetchGeocodeStats();
+    await fetchPendingComplexes();
   };
 
   const handleStopBatch = () => {
@@ -354,6 +373,7 @@ export function DatabaseAdminPage() {
       alert(`'${selectedComplex.name}' 단지의 좌표가 성공적으로 수정되었습니다.`);
       setSelectedComplex({ ...selectedComplex, lat: latNum, lng: lngNum });
       void fetchGeocodeStats();
+      void fetchPendingComplexes();
     } catch (err: any) {
       alert(`좌표 수정 실패: ${err.message || "오류가 발생했습니다."}`);
     } finally {
@@ -377,6 +397,7 @@ export function DatabaseAdminPage() {
       setEditLat("");
       setEditLng("");
       void fetchGeocodeStats();
+      void fetchPendingComplexes();
     } catch (err: any) {
       alert(`좌표 초기화 실패: ${err.message || "오류가 발생했습니다."}`);
     } finally {
@@ -879,6 +900,49 @@ export function DatabaseAdminPage() {
               <p className="text-xs text-neutral">
                 Geocoding이 잘못되었거나 지도가 엉뚱한 위치를 가리키는 아파트 단지의 좌표를 수동으로 수정하거나 리셋할 수 있습니다.
               </p>
+
+              {/* 위경도 좌표가 없는 단지 리스트 */}
+              <div className="space-y-2">
+                <span className="text-xs font-bold text-strong flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                  {t.geocodePendingListTitle} ({pendingComplexes.length}건)
+                </span>
+                
+                {pendingComplexes.length === 0 ? (
+                  <p className="text-[11px] text-emerald-500 font-semibold bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-lg">
+                    ✓ {t.noGeocodePendingComplexes}
+                  </p>
+                ) : (
+                  <div className="overflow-y-auto max-h-[160px] border border-normal rounded-lg bg-alternative/20 p-1.5 space-y-1">
+                    {pendingComplexes.map((complex) => (
+                      <button
+                        key={complex.id}
+                        type="button"
+                        onClick={() => handleSelectCoordsComplex(complex)}
+                        className={classNames(
+                          "w-full text-left p-2 rounded-md text-xs transition-colors flex flex-col gap-0.5 border",
+                          selectedComplex?.id === complex.id
+                            ? "bg-primary/10 border-primary text-primary font-bold shadow-sm"
+                            : "bg-normal border-normal hover:bg-alternative/40 text-strong"
+                        )}
+                      >
+                        <span className="font-bold flex items-center gap-1">
+                          <Building2 className="h-3 w-3 text-neutral" />
+                          {complex.name}
+                        </span>
+                        <span className="text-[10px] text-neutral pl-4">
+                          {complex.regionName || complex.lawdCode} {complex.dongName ? `· ${complex.dongName}` : ""} {complex.jibun ? ` ${complex.jibun}` : ""}
+                        </span>
+                        {complex.geocodeError && (
+                          <span className="text-[9px] text-red-500 pl-4 font-normal italic">
+                            Error: {complex.geocodeError}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="space-y-3 p-3 rounded-lg border border-normal bg-alternative/30">
                 <span className="text-xs font-bold text-strong flex items-center gap-1.5">

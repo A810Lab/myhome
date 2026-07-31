@@ -65,6 +65,15 @@ export function DashboardPage({
   const [dbRegions, setDbRegions] = useState<RegionSummary[]>([]);
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [loadingCollect, setLoadingCollect] = useState(false);
+  const [collectProgress, setCollectProgress] = useState<{
+    processed: number;
+    total: number;
+    success: number;
+    failed: number;
+    failures: { month: string; reason: string }[];
+  } | null>(null);
+  const [shouldStopCollect, setShouldStopCollect] = useState(false);
+  const shouldStopCollectRef = useRef(false);
   const [uiFeedback, setUiFeedback] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // 플로팅 검색 상태
@@ -360,6 +369,33 @@ export function DashboardPage({
     });
   };
 
+  // YYYYMM 범위의 월 목록 구하기 유틸리티
+  const getMonthsInRange = (start: string, end: string): string[] => {
+    const startY = parseInt(start.substring(0, 4));
+    const startM = parseInt(start.substring(4, 6));
+    const endY = parseInt(end.substring(0, 4));
+    const endM = parseInt(end.substring(4, 6));
+
+    const result: string[] = [];
+    let curY = startY;
+    let curM = startM;
+
+    while (curY < endY || (curY === endY && curM <= endM)) {
+      result.push(`${curY}${String(curM).padStart(2, "0")}`);
+      curM++;
+      if (curM > 12) {
+        curM = 1;
+        curY++;
+      }
+    }
+    return result;
+  };
+
+  const handleStopCollect = () => {
+    shouldStopCollectRef.current = true;
+    setShouldStopCollect(true);
+  };
+
   // 수집 및 적재 실행
   const handleCollectSubmit = async () => {
     if (!modalData) return;
@@ -378,6 +414,8 @@ export function DashboardPage({
     setLoadingCollect(true);
     setModalError("");
     setUiFeedback(null);
+    setShouldStopCollect(false);
+    shouldStopCollectRef.current = false;
 
     try {
       // 1. 신규 수집 지역의 경우 DB regions에 먼저 추가
@@ -389,30 +427,78 @@ export function DashboardPage({
         });
       }
 
-      // 2. 해당 기간 실거래 수집 API 호출 (refresh=true로 실시간 국토부 긁어와서 적재 유도)
-      const records = await searchTransactions(
-        modalData.lawdCode,
-        modalData.regionName,
-        { startMonth, endMonth },
-        true
-      );
+      // 2. 월별 분할 실거래 수집 API 호출
+      const months = getMonthsInRange(startMonth, endMonth);
+      const progressState = {
+        processed: 0,
+        total: months.length,
+        success: 0,
+        failed: 0,
+        failures: [] as { month: string; reason: string }[]
+      };
+      setCollectProgress(progressState);
+
+      let totalRecordsCount = 0;
+      for (let i = 0; i < months.length; i++) {
+        if (shouldStopCollectRef.current) {
+          break;
+        }
+
+        const month = months[i];
+        try {
+          const records = await searchTransactions(
+            modalData.lawdCode,
+            modalData.regionName,
+            { dealMonth: month },
+            true
+          );
+          totalRecordsCount += records.length;
+          progressState.success += 1;
+        } catch (err: any) {
+          console.error(`Collection failed for month ${month}:`, err);
+          progressState.failed += 1;
+          progressState.failures.push({
+            month,
+            reason: err.message || "네트워크 오류 또는 API 에러"
+          });
+        }
+
+        progressState.processed += 1;
+        setCollectProgress({ ...progressState });
+
+        // API 레이트 리밋 방지를 위한 약간의 대기
+        if (i < months.length - 1 && !shouldStopCollectRef.current) {
+          await new Promise((resolve) => setTimeout(resolve, 150));
+        }
+      }
+
+      const wasStopped = shouldStopCollectRef.current;
 
       // 사용자 로그 기록
       void logActivity(
         "search_transactions",
-        `${modalData.regionName} 실거래 수집/추가집계 (${startMonth}~${endMonth})`,
+        `${modalData.regionName} 실거래 수집/추가집계 (${startMonth}~${endMonth})${wasStopped ? " [중단됨]" : ""}`,
         {
           lawdCode: modalData.lawdCode,
           regionName: modalData.regionName,
           period: { startMonth, endMonth },
-          count: records.length
+          count: totalRecordsCount,
+          stopped: wasStopped
         }
       );
 
-      setUiFeedback({
-        message: `${modalData.regionName} 실거래 데이터 적재를 완료했습니다. (${records.length.toLocaleString()}건 완료)`,
-        type: "success"
-      });
+      if (wasStopped) {
+        setUiFeedback({
+          message: `${modalData.regionName} 실거래 데이터 수집이 중단되었습니다. (완료: ${progressState.success}개월, 실패: ${progressState.failed}개월)`,
+          type: "error"
+        });
+      } else {
+        setUiFeedback({
+          message: `${modalData.regionName} 실거래 데이터 적재를 완료했습니다. (${totalRecordsCount.toLocaleString()}건 완료)`,
+          type: "success"
+        });
+      }
+
       setIsModalOpen(false);
       void loadRegions();
       if (onChanged) onChanged(); // 대시보드 상태 갱신 유도
@@ -421,6 +507,7 @@ export function DashboardPage({
       setModalError(err.message || "수집 진행 도중 에러가 발생했습니다.");
     } finally {
       setLoadingCollect(false);
+      setCollectProgress(null);
     }
   };
 
@@ -505,56 +592,46 @@ export function DashboardPage({
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-1">
-        <h2 className="text-xl md:text-2xl font-black text-strong tracking-tight mt-1 flex items-center gap-2">
-          <LayoutDashboard className="text-primary h-5 w-5 md:h-6 md:w-6" />
-          {t.dashboardTitle}
-        </h2>
-        {!isMobile && <p className="text-sm text-neutral">{t.dashboardSubtitle}</p>}
-      </header>
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-normal/50">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-xl md:text-2xl font-black text-strong tracking-tight mt-1 flex items-center gap-2">
+            <LayoutDashboard className="text-primary h-5 w-5 md:h-6 md:w-6" />
+            {t.dashboardTitle}
+          </h2>
+          {!isMobile && <p className="text-xs md:text-sm text-neutral">{t.dashboardSubtitle}</p>}
+        </div>
 
-      {/* 🚀 화려한 그라디언트 히어로 배너 (실거래 DB 현황) */}
-      <div className="relative overflow-hidden rounded-2xl border border-primary-100/80 bg-gradient-to-br from-primary-50 via-primary-100/30 to-indigo-100/20 text-strong p-6 md:p-8 shadow-md shadow-primary-100/10 dark:border-none dark:bg-gradient-to-br dark:from-primary-600 dark:via-primary-700 dark:to-indigo-900 dark:text-white dark:shadow-lg dark:shadow-primary-500/10">
-        <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-primary-200/20 blur-2xl pointer-events-none dark:bg-white/5" />
-        <div className="absolute -left-10 -bottom-10 w-40 h-40 rounded-full bg-primary-200/20 blur-2xl pointer-events-none dark:bg-white/5" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-xl">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary-100 text-primary border border-primary-200/30 backdrop-blur-md dark:bg-white/20 dark:text-white dark:border-none">
-              <Database className="h-3 w-3" />
-              Live DB Status
+        {/* 미니 DB 현황 텍스트 정보 (우측 정렬) */}
+        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs text-neutral select-none shrink-0 font-medium mt-1 md:mt-0">
+          <div className="flex items-center gap-1">
+            <MapPin className="h-3.5 w-3.5 text-primary/70 shrink-0" />
+            <span className="text-assistive">{t.dbStatsRegionCount}</span>
+            <span className="font-black text-strong font-mono ml-0.5">
+              {state.dbStats?.regions?.toLocaleString("ko-KR") ?? 0}
             </span>
-            <h3 className="text-lg md:text-2xl font-black tracking-tight text-strong dark:text-white">{t.dbStatsTitle}</h3>
-            <p className="text-xs md:text-sm text-neutral leading-relaxed font-medium dark:text-white/80">
-              {t.dbStatsSubtitle}
-            </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 md:gap-4 shrink-0 min-w-full md:min-w-[360px]">
-            <div className="bg-white/80 border border-primary-100/50 p-3 md:p-4 rounded-xl flex flex-col items-center justify-center text-center transition-all hover:bg-white dark:bg-white/10 dark:border-white/10 dark:text-white dark:hover:bg-white/15">
-              <MapPin className="h-5 w-5 text-primary/70 mb-1.5 dark:text-white/70" />
-              <span className="text-[10px] md:text-xs text-neutral font-bold dark:text-white/60">{t.dbStatsRegionCount}</span>
-              <span className="text-lg md:text-xl font-bold font-mono mt-1 text-strong dark:text-white">
-                {state.dbStats?.regions?.toLocaleString("ko-KR") ?? 0}
-              </span>
-            </div>
-            <div className="bg-white/80 border border-primary-100/50 p-3 md:p-4 rounded-xl flex flex-col items-center justify-center text-center transition-all hover:bg-white dark:bg-white/10 dark:border-white/10 dark:text-white dark:hover:bg-white/15">
-              <Building2 className="h-5 w-5 text-primary/70 mb-1.5 dark:text-white/70" />
-              <span className="text-[10px] md:text-xs text-neutral font-bold dark:text-white/60">{t.dbStatsComplexCount}</span>
-              <span className="text-lg md:text-xl font-bold font-mono mt-1 text-strong dark:text-white">
-                {state.dbStats?.complexes?.toLocaleString("ko-KR") ?? 0}
-              </span>
-            </div>
-            <div className="bg-white/80 border border-primary-100/50 p-3 md:p-4 rounded-xl flex flex-col items-center justify-center text-center transition-all hover:bg-white dark:bg-white/10 dark:border-white/10 dark:text-white dark:hover:bg-white/15">
-              <TrendingUp className="h-5 w-5 text-primary/70 mb-1.5 dark:text-white/70" />
-              <span className="text-[10px] md:text-xs text-neutral font-bold dark:text-white/60">{t.dbStatsDealCount}</span>
-              <span className="text-lg md:text-xl font-bold font-mono mt-1 text-strong dark:text-white">
-                {state.dbStats?.transactions?.toLocaleString("ko-KR") ?? 0}
-              </span>
-            </div>
+          <span className="hidden sm:inline text-normal/40 select-none">|</span>
+
+          <div className="flex items-center gap-1">
+            <Building2 className="h-3.5 w-3.5 text-primary/70 shrink-0" />
+            <span className="text-assistive">{t.dbStatsComplexCount}</span>
+            <span className="font-black text-strong font-mono ml-0.5">
+              {state.dbStats?.complexes?.toLocaleString("ko-KR") ?? 0}
+            </span>
+          </div>
+
+          <span className="hidden sm:inline text-normal/40 select-none">|</span>
+
+          <div className="flex items-center gap-1">
+            <TrendingUp className="h-3.5 w-3.5 text-primary/70 shrink-0" />
+            <span className="text-assistive">{t.dbStatsDealCount}</span>
+            <span className="font-black text-primary font-mono ml-0.5">
+              {state.dbStats?.transactions?.toLocaleString("ko-KR") ?? 0}
+            </span>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* 🗺️ 실거래 수집/집계 지역 지도 (통합 배치) */}
       <div className="rounded-2xl border border-normal bg-elevated p-4 shadow-sm relative overflow-hidden">
@@ -783,6 +860,74 @@ export function DashboardPage({
                 </div>
               </div>
 
+              {/* 집계 진행 상황 노출 */}
+              {loadingCollect && collectProgress && (
+                <div className="space-y-3 p-3.5 rounded-xl bg-primary-50/30 border border-primary-100 dark:bg-primary-950/10 dark:border-primary-900/20">
+                  <div className="flex gap-2">
+                    <div className="flex-1 py-2 rounded-xl bg-primary/10 text-primary font-bold flex items-center justify-center gap-2 border border-primary/20 text-xs">
+                      <RefreshCw size={13} className="animate-spin text-primary shrink-0" />
+                      <span>
+                        {t.collectingProgressText || "실거래 수집 중"} ({collectProgress.processed} / {collectProgress.total} 개월)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleStopCollect}
+                      disabled={shouldStopCollect}
+                      className="px-3.5 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 active:scale-95 transition-all flex items-center justify-center gap-1 shadow-lg shadow-red-500/20 disabled:opacity-50 text-xs shrink-0"
+                    >
+                      {t.stopBtn || "중단"}
+                    </button>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center text-[9px] font-bold text-neutral">
+                      <span>{t.collectProgressTitle || "실거래 데이터 수집 진행 상황"}</span>
+                      <span>{Math.round((collectProgress.processed / collectProgress.total) * 100)}%</span>
+                    </div>
+                    <div className="w-full h-1.5 rounded-full bg-alternative overflow-hidden border border-normal">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{ width: `${(collectProgress.processed / collectProgress.total) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] font-semibold text-neutral flex justify-between bg-alternative/40 p-2 rounded-lg border border-normal/50">
+                    <span>{t.progressStatsTitle || "진행 수치"}</span>
+                    <span>
+                      성공: <span className="text-emerald-500 font-bold">{collectProgress.success}</span> | 실패: <span className="text-red-500 font-bold">{collectProgress.failed}</span>
+                    </span>
+                  </div>
+
+                  {collectProgress.failures.length > 0 && (
+                    <div className="border border-red-500/20 rounded-lg bg-red-500/5 p-3 space-y-2">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-red-600">
+                        <span>⚠️ {t.collectFailuresTitle || "실거래 수집 실패 목록"} ({collectProgress.failures.length}건)</span>
+                      </div>
+                      <div className="overflow-y-auto max-h-40 border border-normal rounded bg-elevated text-[9px]">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-normal bg-alternative/30 font-bold text-neutral">
+                              <th className="p-1.5">{t.monthLabel || "대상월"}</th>
+                              <th className="p-1.5">{t.reasonLabel || "실패 사유"}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {collectProgress.failures.map((fail, idx) => (
+                              <tr key={idx} className="border-b border-normal last:border-0 hover:bg-alternative/20">
+                                <td className="p-1.5 font-semibold text-neutral">{fail.month}</td>
+                                <td className="p-1.5 text-red-500">{fail.reason}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 에러 노출 */}
               {modalError && (
                 <div className="p-2.5 rounded-lg bg-warn-50 border border-warn text-[10px] text-warn flex items-center gap-1.5 dark:bg-warn-900/10 dark:border-warn-900/30">
@@ -827,7 +972,9 @@ export function DashboardPage({
                   {loadingCollect ? (
                     <>
                       <RefreshCw size={13} className="animate-spin" />
-                      <span>집계 중...</span>
+                      <span>
+                        {(t.collectProgressStatus || "집계 중")} {collectProgress ? `(${collectProgress.processed}/${collectProgress.total})` : ""}
+                      </span>
                     </>
                   ) : (
                     <>

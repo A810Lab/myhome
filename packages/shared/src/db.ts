@@ -1063,6 +1063,35 @@ export function getComplexesWithoutCoords(lawdCode?: string): { id: string; name
 }
 
 /**
+ * 위경도 좌표가 없는 모든 단지 목록 조회 (수동 관리 대상)
+ */
+export function getComplexesMissingCoords(): {
+  id: string;
+  name: string;
+  lawdCode: string;
+  regionName: string;
+  dongName: string | null;
+  jibun: string | null;
+  roadName: string | null;
+  lat: number | null;
+  lng: number | null;
+  geocodeFailed: number;
+  geocodeError: string | null;
+}[] {
+  const db = getDb();
+  const query = `
+    SELECT c.id, c.name, c.lawd_code AS lawdCode, r.display_name AS regionName,
+           c.dong_name AS dongName, c.jibun, c.road_name AS roadName,
+           c.lat, c.lng, c.geocode_failed AS geocodeFailed, c.geocode_error AS geocodeError
+    FROM complexes c
+    JOIN regions r ON c.lawd_code = r.lawd_code
+    WHERE c.lat IS NULL OR c.lng IS NULL
+    ORDER BY c.name ASC
+  `;
+  return db.prepare(query).all() as any[];
+}
+
+/**
  * 좌표 확보 단지 목록 조회 (반경 검색 대상)
  */
 export function getComplexesWithCoords(lawdCode?: string): { id: string; name: string; lawdCode: string; regionName: string; lat: number; lng: number; dongName: string | null; jibun: string | null }[] {
@@ -1440,7 +1469,7 @@ export async function readPresetsCore(email: string, type: 'overview' | 'analysi
       buildingName: r.buildingName,
       areaM2: r.areaM2,
       createdAt: r.createdAt
-    }));
+    })).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   }
 }
 

@@ -446,6 +446,10 @@ export function loadGeocodeStats() {
   return request<{ total: number; geocoded: number; pending: number }>("/api/graph/geocode-stats");
 }
 
+export function loadGeocodePending() {
+  return request<any[]>("/api/graph/geocode-pending");
+}
+
 export function updateComplexCoords(complexId: string, lat: number, lng: number) {
   return request<{ success: boolean }>("/api/complexes/coords", {
     method: "PUT",

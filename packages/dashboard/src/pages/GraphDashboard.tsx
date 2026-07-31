@@ -28,11 +28,38 @@ interface GraphDashboardProps {
 export default function GraphDashboard({ onNavigateToRules, onSelectComplex, config }: GraphDashboardProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "insight">("overview");
 
-  const [filter, setFilter] = useState<GraphFilter>({
-    startDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().substring(0, 7),
-    endDate: new Date().toISOString().substring(0, 7),
+  const [filter, setFilter] = useState<GraphFilter>(() => {
+    const defaultFilter: GraphFilter = {
+      startDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().substring(0, 7),
+      endDate: new Date().toISOString().substring(0, 7),
+    };
+    const saved = localStorage.getItem("myhome_selected_regions");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          defaultFilter.lawdCodes = parsed.map((item: any) => item.lawdCode);
+        }
+      } catch (e) {
+        console.error("Failed to parse saved regions", e);
+      }
+    }
+    return defaultFilter;
   });
-  const [regionName, setRegionName] = useState("");
+  const [regionName, setRegionName] = useState(() => {
+    const saved = localStorage.getItem("myhome_selected_regions");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((item: any) => item.regionName || "").filter(Boolean).join(", ");
+        }
+      } catch (e) {
+        console.error("Failed to parse saved region names", e);
+      }
+    }
+    return "";
+  });
   const [areaUnit, setAreaUnit] = useState<"pyeong" | "m2">("pyeong");
   const [areaType, setAreaType] = useState<"supply" | "dedicated">("supply");
 
