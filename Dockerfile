@@ -34,6 +34,7 @@ ENV PORT=4174
 COPY --from=builder /usr/src/app/package*.json ./
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY --from=builder /usr/src/app/packages ./packages
+COPY --from=builder /usr/src/app/scripts ./scripts
 
 # 데이터 저장 디렉토리 생성
 RUN mkdir -p /app/data

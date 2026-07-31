@@ -105,19 +105,19 @@ export function createRouter() {
     try {
       const config = await getSystemConfig();
       res.json({
-        telegramBotToken: maskSecret(Config.TELEGRAM_BOT_TOKEN),
-        telegramChatId: maskSecret(Config.TELEGRAM_CHAT_ID),
-        kakaoRestApiKey: maskSecret(Config.KAKAO_REST_API_KEY),
-        jusoConfmKey: maskSecret(Config.JUSO_CONFM_KEY),
-        dataGoKrApiKey: maskSecret(Config.DATA_GO_KR_API_KEY),
-        kakaoJavascriptKey: maskSecret(Config.KAKAO_JAVASCRIPT_KEY),
-        kakaoNativeAppKey: maskSecret(Config.KAKAO_NATIVE_APP_KEY),
-        googleClientId: Config.GOOGLE_CLIENT_ID || "",
-        googleClientSecret: maskSecret(Config.GOOGLE_CLIENT_SECRET),
-        googleRedirectUri: Config.GOOGLE_REDIRECT_URI || "",
-        allowedEmails: Config.ALLOWED_EMAILS || "",
-        adminEmails: Config.ADMIN_EMAILS || "",
-        geminiApiKey: maskSecret(Config.GEMINI_API_KEY)
+        telegramBotToken: maskSecret(config.telegramBotToken || Config.TELEGRAM_BOT_TOKEN),
+        telegramChatId: maskSecret(config.telegramChatId || Config.TELEGRAM_CHAT_ID),
+        kakaoRestApiKey: maskSecret(config.kakaoRestApiKey || Config.KAKAO_REST_API_KEY),
+        jusoConfmKey: maskSecret(config.jusoConfmKey || Config.JUSO_CONFM_KEY),
+        dataGoKrApiKey: maskSecret(config.dataGoKrApiKey || Config.DATA_GO_KR_API_KEY),
+        kakaoJavascriptKey: maskSecret(config.kakaoJavascriptKey || Config.KAKAO_JAVASCRIPT_KEY),
+        kakaoNativeAppKey: maskSecret(config.kakaoNativeAppKey || Config.KAKAO_NATIVE_APP_KEY),
+        googleClientId: config.googleClientId || Config.GOOGLE_CLIENT_ID || "",
+        googleClientSecret: maskSecret(config.googleClientSecret || Config.GOOGLE_CLIENT_SECRET),
+        googleRedirectUri: config.googleRedirectUri || Config.GOOGLE_REDIRECT_URI || "",
+        allowedEmails: config.allowedEmails || Config.ALLOWED_EMAILS || "",
+        adminEmails: config.adminEmails || Config.ADMIN_EMAILS || "",
+        geminiApiKey: maskSecret(config.geminiApiKey || Config.GEMINI_API_KEY)
       });
     } catch (err) {
       next(err);
