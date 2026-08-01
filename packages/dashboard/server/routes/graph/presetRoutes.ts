@@ -85,12 +85,12 @@ router.get("/presets/analysis", asyncHandler(async (req, res) => {
 router.post("/presets/analysis", asyncHandler(async (req, res) => {
   const email = getAuthenticatedEmail(req, res);
   if (!email) return;
-  const { name, regionName, buildingName, areaM2 } = req.body;
+  const { name, regionName, buildingName, areaM2, areaMaxM2 } = req.body;
   if (!name || !regionName || !buildingName) {
     res.status(400).json({ error: "name, regionName, buildingName이 필요합니다." });
     return;
   }
-  const newPreset = await savePresetCore({ name, regionName, buildingName, areaM2 }, email, "analysis");
+  const newPreset = await savePresetCore({ name, regionName, buildingName, areaM2, areaMaxM2 }, email, "analysis");
   res.status(201).json(newPreset);
 }));
 

@@ -115,6 +115,7 @@ export function initDb(): void {
       region_name TEXT NOT NULL,
       building_name TEXT NOT NULL,
       area_m2 REAL,
+      area_max_m2 REAL,
       created_at TEXT NOT NULL,
       FOREIGN KEY (user_email) REFERENCES user_settings(email) ON DELETE CASCADE
     );
@@ -241,6 +242,13 @@ export function initDb(): void {
   const rulesColNames = new Set(rulesCols.map((c: any) => c.name));
   if (!rulesColNames.has('alert_time')) {
     db.exec("ALTER TABLE rules ADD COLUMN alert_time TEXT DEFAULT '09:00'");
+  }
+
+  // -- graph_presets_analysis 테이블 area_max_m2 컬럼 마이그레이션 (기존 DB 호환)
+  const gpaCols = db.prepare("PRAGMA table_info(graph_presets_analysis)").all() as { name: string }[];
+  const gpaColNames = new Set(gpaCols.map((c: any) => c.name));
+  if (!gpaColNames.has('area_max_m2')) {
+    db.exec("ALTER TABLE graph_presets_analysis ADD COLUMN area_max_m2 REAL");
   }
 
   // Complexes/Regions 단지명 및 지역명 검색 성능 개선용 인덱스 추가

@@ -238,7 +238,7 @@ export function loadPresetsAnalysis() {
   return request<any[]>("/api/graph/presets/analysis");
 }
 
-export function savePresetAnalysis(preset: { name: string; regionName: string; buildingName: string; areaM2?: number }) {
+export function savePresetAnalysis(preset: { name: string; regionName: string; buildingName: string; areaM2?: number; areaMaxM2?: number }) {
   return request<any>("/api/graph/presets/analysis", {
     method: "POST",
     body: JSON.stringify(preset),

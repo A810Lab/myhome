@@ -557,11 +557,13 @@ export default function FilterPanel({
           return;
         }
         const areaVal = minArea ? Number(minArea) : undefined;
+        const areaMaxVal = maxArea ? Number(maxArea) : undefined;
         await savePresetAnalysis({
           name: newPresetName,
           regionName: regionText,
           buildingName: complexName,
-          areaM2: areaVal
+          areaM2: areaVal,
+          areaMaxM2: areaMaxVal
         });
       }
       setNewPresetName("");
@@ -617,7 +619,7 @@ export default function FilterPanel({
       setRegionText(p.regionName || "");
       setComplexName(p.buildingName || "");
       setMinArea(p.areaM2 ? String(p.areaM2) : "");
-      setMaxArea(p.areaM2 ? String(p.areaM2) : "");
+      setMaxArea(p.areaMaxM2 ? String(p.areaMaxM2) : (p.areaM2 ? String(p.areaM2) : ""));
 
       const nextFilter: GraphFilter = {
         lawdCode: filter.lawdCode,
@@ -626,7 +628,7 @@ export default function FilterPanel({
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         minArea: p.areaM2 || undefined,
-        maxArea: p.areaM2 || undefined,
+        maxArea: p.areaMaxM2 || p.areaM2 || undefined,
       };
 
       onFilterChange(nextFilter, p.regionName || preset.name);

@@ -1466,13 +1466,14 @@ export async function readPresetsCore(email: string, type: 'overview' | 'analysi
       return { id: r.id, name: r.name, filter, createdAt: r.createdAt };
     });
   } else {
-    const rows = db.prepare(`SELECT id, name, region_name AS regionName, building_name AS buildingName, area_m2 AS areaM2, created_at AS createdAt FROM graph_presets_analysis WHERE user_email = ? ORDER BY created_at DESC`).all(email) as any[];
+    const rows = db.prepare(`SELECT id, name, region_name AS regionName, building_name AS buildingName, area_m2 AS areaM2, area_max_m2 AS areaMaxM2, created_at AS createdAt FROM graph_presets_analysis WHERE user_email = ? ORDER BY created_at DESC`).all(email) as any[];
     return rows.map(r => ({
       id: r.id,
       name: r.name,
       regionName: r.regionName,
       buildingName: r.buildingName,
       areaM2: r.areaM2,
+      areaMaxM2: r.areaMaxM2,
       createdAt: r.createdAt
     })).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   }
@@ -1498,19 +1499,21 @@ export async function savePresetCore(preset: any, email: string, type: 'overview
     stmt.run(id, email, preset.name, filterStr, preset.createdAt || now);
     return { ...preset, id, createdAt: preset.createdAt || now };
   } else {
-    const stmt = db.prepare(`INSERT INTO graph_presets_analysis (id, user_email, name, region_name, building_name, area_m2, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) 
+    const stmt = db.prepare(`INSERT INTO graph_presets_analysis (id, user_email, name, region_name, building_name, area_m2, area_max_m2, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
       ON CONFLICT(id) DO UPDATE SET 
         name = excluded.name, 
         region_name = excluded.region_name,
         building_name = excluded.building_name,
-        area_m2 = excluded.area_m2`);
-    stmt.run(id, email, preset.name, preset.regionName, preset.buildingName, preset.areaM2 ?? null, preset.createdAt || now);
+        area_m2 = excluded.area_m2,
+        area_max_m2 = excluded.area_max_m2`);
+    stmt.run(id, email, preset.name, preset.regionName, preset.buildingName, preset.areaM2 ?? null, preset.areaMaxM2 ?? null, preset.createdAt || now);
     return {
       id,
       name: preset.name,
       regionName: preset.regionName,
       buildingName: preset.buildingName,
       areaM2: preset.areaM2,
+      areaMaxM2: preset.areaMaxM2,
       createdAt: preset.createdAt || now
     };
   }
