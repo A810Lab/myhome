@@ -47,6 +47,8 @@ router.post("/insights/generate", asyncHandler(async (req, res) => {
     return;
   }
 
+  const userEmail = req.user?.email;
+
   const filter: GraphFilter = {
     lawdCode,
     complexName: complexName || undefined,
@@ -71,7 +73,7 @@ ${contextText}
 4. 분석 마지막 부분에는 이 지역/단지에 대한 종합 투자 및 거주 요약 의견을 2~3줄 요약 문단으로 명시해 주세요.
 `;
 
-  const generatedReport = await generateTextWithGemini(prompt);
+  const generatedReport = await generateTextWithGemini(prompt, userEmail);
 
   const title = complexName ? `${complexName} 실거래 분석 리포트` : `${regionName || lawdCode} 지역 실거래 분석 리포트`;
   const newInsight = await saveInsight({

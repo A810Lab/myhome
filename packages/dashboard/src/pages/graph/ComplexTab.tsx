@@ -1341,7 +1341,7 @@ export default function ComplexTab({
           <SectionCard title={<span className="flex items-center gap-2"><TrendingUp size={18} className="text-primary" /><span>{t("monthlyTrendTitle")}</span></span>}>
             {/* 요약 통계 카드 그리드 */}
             {kpiData && (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <StatCard
                   icon={DollarSign}
                   label={`${t("recentAvgPrice")} (${kpiData.latestMonth})`}

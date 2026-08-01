@@ -745,37 +745,37 @@ function RuleList({
                   <h3 className="font-bold text-strong truncate">{rule.name}</h3>
                   {!rule.enabled && <span className="bg-alternative text-neutral px-1.5 py-0.5 rounded text-[10px] font-bold border border-normal">{t.ruleSuspended}</span>}
                 </div>
-                <p className="mt-1 text-sm text-neutral leading-relaxed">
-                  <span className="font-medium text-strong">{rule.regionName}</span>
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-neutral">
+                  <span className="font-semibold text-strong bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{rule.regionName}</span>
                   {rule.apartmentKeywords && keywordLen > 0 ? (
-                    <span className="ml-1 text-[11px] bg-primary/5 text-primary px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] bg-primary/5 text-primary px-1.5 py-0.5 rounded font-bold border border-primary/10">
                       {keywordLen === 1
                         ? rule.apartmentKeywords[0]
                         : locale === "ko"
                           ? `${rule.apartmentKeywords[0]} 외 ${keywordLen - 1}곳`
                           : `${rule.apartmentKeywords[0]} & ${keywordLen - 1} others`}
                     </span>
-                  ) : <span className="ml-1 text-xs">{t.ruleAllComplexes}</span>}
-                  <span className="mx-1.5 text-slate-300 dark:text-slate-700">|</span>
-                  <span className="text-xs">{t.ruleRecentTrack}</span>
-                  <span className="mx-1.5 text-slate-300 dark:text-slate-700">|</span>
-                  <span className="text-primary font-medium">
+                  ) : <span className="text-[10px] bg-primary/5 text-primary px-1.5 py-0.5 rounded font-bold border border-primary/10">{t.ruleAllComplexes}</span>}
+                  
+                  <span className="text-[10px] bg-blue-500/5 text-blue-500 dark:text-blue-400 px-1.5 py-0.5 rounded font-bold border border-blue-500/10">
                     {locale === "ko"
                       ? `${rule.minPriceEok ?? 0}억~${rule.maxPriceEok ? rule.maxPriceEok + "억" : t.ruleUnlimited}`
                       : `${rule.minPriceEok ?? 0} Eok ~ ${rule.maxPriceEok ? rule.maxPriceEok + " Eok" : t.ruleUnlimited}`}
                   </span>
+                  
                   {(rule.minArea !== undefined || rule.maxArea !== undefined) && (
-                    <>
-                      <span className="mx-1.5 text-slate-300 dark:text-slate-700">|</span>
-                      <span className="text-[11px] bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10 px-1.5 py-0.5 rounded font-medium">
-                        {rule.minArea ?? 0}㎡ ~ {rule.maxArea ? rule.maxArea + "㎡" : t.ruleUnlimited}
-                        <span className="text-[9px] font-normal ml-1">
-                          ({rule.minArea ? Math.round(rule.minArea / 3.3) : 0}평~{rule.maxArea ? Math.round(rule.maxArea / 3.3) : "무제한"})
-                        </span>
+                    <span className="text-[10px] bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10 px-1.5 py-0.5 rounded font-bold">
+                      {rule.minArea ?? 0}㎡ ~ {rule.maxArea ? rule.maxArea + "㎡" : t.ruleUnlimited}
+                      <span className="text-[9px] font-normal ml-1">
+                        ({rule.minArea ? Math.round(rule.minArea / 3.3) : 0}평~{rule.maxArea ? Math.round(rule.maxArea / 3.3) : "무제한"})
                       </span>
-                    </>
+                    </span>
                   )}
-                </p>
+
+                  <span className="text-[10px] text-neutral bg-alternative/60 px-1.5 py-0.5 rounded border border-normal/50 font-medium">
+                    {t.ruleRecentTrack}
+                  </span>
+                </div>
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral">
                   <span className="bg-alternative border border-normal px-1.5 py-0.5 rounded leading-none">{comparisonLabels[rule.comparisonCriteria]}</span>
                   <span>

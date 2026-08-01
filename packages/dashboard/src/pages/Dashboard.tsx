@@ -602,7 +602,7 @@ export function DashboardPage({
         </div>
 
         {/* 미니 DB 현황 텍스트 정보 (우측 정렬) */}
-        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs text-neutral select-none shrink-0 font-medium mt-1 md:mt-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-neutral select-none shrink-0 font-medium mt-2 md:mt-0 w-full md:w-auto justify-start md:justify-end">
           <div className="flex items-center gap-1">
             <MapPin className="h-3.5 w-3.5 text-primary/70 shrink-0" />
             <span className="text-assistive">{t.dbStatsRegionCount}</span>
@@ -689,7 +689,7 @@ export function DashboardPage({
       </div>
 
       {/* 핵심 지표 요약 (즉시 노출) */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={Bell} label={t.activeRules} value={`${stats.activeRules}${t.unitCount}`} tone="good" />
         <StatCard icon={CheckCircle2} label={t.totalMatches} value={`${stats.matches}${t.unitCount}`} />
         <StatCard 

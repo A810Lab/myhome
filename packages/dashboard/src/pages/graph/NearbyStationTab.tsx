@@ -777,7 +777,7 @@ export default function NearbyStationTab({ onSelectComplex, onNavigateToRules }:
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:items-center gap-1.5 mt-1 select-none">
                 <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-neutral">
                   <input
                     type="checkbox"

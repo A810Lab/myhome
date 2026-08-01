@@ -73,6 +73,7 @@ export function SettingsPage({ state, onChanged, isAdmin = false, userEmail }: {
   const [telegramBotToken, setTelegramBotToken] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
   const [kakaoRestApiKey, setKakaoRestApiKey] = useState("");
+  const [geminiApiKey, setGeminiApiKey] = useState("");
   const [kakaoJavascriptKey, setKakaoJavascriptKey] = useState("");
   const [kakaoNativeAppKey, setKakaoNativeAppKey] = useState("");
   const [jusoConfmKey, setJusoConfmKey] = useState("");
@@ -100,6 +101,7 @@ export function SettingsPage({ state, onChanged, isAdmin = false, userEmail }: {
       setTelegramBotToken(userData.telegramBotToken || "");
       setTelegramChatId(userData.telegramChatId || "");
       setKakaoRestApiKey(userData.kakaoRestApiKey || "");
+      setGeminiApiKey((userData as any).geminiApiKey || "");
 
       setKakaoJavascriptKey(systemData.kakaoJavascriptKey || "");
       setKakaoNativeAppKey(systemData.kakaoNativeAppKey || "");
@@ -131,7 +133,8 @@ export function SettingsPage({ state, onChanged, isAdmin = false, userEmail }: {
           telegramBotToken,
           telegramChatId,
           kakaoRestApiKey,
-        })
+          geminiApiKey: geminiApiKey || null,
+        } as any)
       ];
       if (isAdmin) {
         promises.push(
@@ -478,6 +481,30 @@ export function SettingsPage({ state, onChanged, isAdmin = false, userEmail }: {
                     </div>
                     <p className="text-[10px] text-assistive mt-4 border-t border-normal/50 pt-2">
                       * <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="text-primary hover:underline font-semibold">@BotFather</a>를 통해 봇을 생성하고 토큰을 획득합니다. 대화방 ID는 수신 그룹/채널에 봇을 참여시킨 뒤 <a href="https://t.me/getidsbot" target="_blank" rel="noreferrer" className="text-primary hover:underline font-semibold">@getidsbot</a> 등을 호출해 확인합니다.
+                    </p>
+                  </div>
+
+                  {/* 2-2. Gemini API 설정 */}
+                  <div className="space-y-4 p-4 rounded-xl border border-normal bg-normal/30 flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-strong border-b border-normal pb-2 flex items-center justify-between gap-1.5">
+                        <span className="flex items-center gap-1.5">💡 Gemini API 설정 (개인 설정)</span>
+                      </h3>
+                      <p className="text-[11px] text-neutral mt-1">AI 인사이트 리포트 생성에 사용되는 개인 Gemini API 인증키입니다. 미설정 시 기본 시스템 API 키를 사용합니다.</p>
+                      
+                      <div className="flex flex-col gap-1.5 mt-4">
+                        <label className="text-xs font-semibold text-neutral">Gemini API 키 (Gemini API Key)</label>
+                        <input
+                          type="password"
+                          value={geminiApiKey}
+                          onChange={(e) => setGeminiApiKey(e.target.value)}
+                          placeholder="Google Gemini API Key 입력"
+                          className="w-full bg-normal border border-normal rounded-lg px-3 py-2 text-xs text-strong placeholder-assistive focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-assistive mt-4 border-t border-normal/50 pt-2">
+                      * <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="text-primary hover:underline font-semibold">Google AI Studio</a>에서 API 키를 발급받을 수 있습니다.
                     </p>
                   </div>
 

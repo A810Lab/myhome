@@ -155,7 +155,7 @@ export default function ComplexAnalysisPage({
                 className={classNames(
                   "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
                   areaType === "supply"
-                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    ? "bg-primary text-white"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
               >
@@ -167,7 +167,7 @@ export default function ComplexAnalysisPage({
                 className={classNames(
                   "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
                   areaType === "dedicated"
-                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    ? "bg-primary text-white"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
               >
@@ -183,7 +183,7 @@ export default function ComplexAnalysisPage({
                 className={classNames(
                   "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
                   areaUnit === "pyeong"
-                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    ? "bg-primary text-white"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
               >
@@ -195,7 +195,7 @@ export default function ComplexAnalysisPage({
                 className={classNames(
                   "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
                   areaUnit === "m2"
-                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    ? "bg-primary text-white"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
               >

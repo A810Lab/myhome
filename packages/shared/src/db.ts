@@ -395,11 +395,11 @@ export async function searchTransactions(filter: GraphFilter): Promise<any[]> {
     params.push(filter.endDate);
   }
   if (filter.minArea !== undefined && filter.minArea !== null) {
-    queryStr += " AND t.area_m2 >= ?";
+    queryStr += " AND COALESCE(m.supply_area_m2, t.area_m2 / 0.78) >= ?";
     params.push(filter.minArea);
   }
   if (filter.maxArea !== undefined && filter.maxArea !== null) {
-    queryStr += " AND t.area_m2 <= ?";
+    queryStr += " AND COALESCE(m.supply_area_m2, t.area_m2 / 0.78) <= ?";
     params.push(filter.maxArea);
   }
 
@@ -1224,13 +1224,14 @@ export type UserSettings = {
   telegramBotToken: string | null;
   telegramChatId: string | null;
   kakaoRestApiKey: string | null;
+  geminiApiKey: string | null;
   alertedDedupeKeys: string[];
 };
 
 export function getUserSettings(email: string): UserSettings | null {
   const row = getPreparedStatement(`
     SELECT email, telegram_bot_token AS telegramBotToken, telegram_chat_id AS telegramChatId,
-           kakao_rest_api_key AS kakaoRestApiKey, alerted_dedupe_keys AS alertedDedupeKeys
+           kakao_rest_api_key AS kakaoRestApiKey, gemini_api_key AS geminiApiKey, alerted_dedupe_keys AS alertedDedupeKeys
     FROM user_settings
     WHERE email = ?
   `).get(email) as any | undefined;
@@ -1249,6 +1250,7 @@ export function getUserSettings(email: string): UserSettings | null {
     telegramBotToken: row.telegramBotToken,
     telegramChatId: row.telegramChatId,
     kakaoRestApiKey: row.kakaoRestApiKey,
+    geminiApiKey: row.geminiApiKey,
     alertedDedupeKeys,
   };
 }
@@ -1259,6 +1261,7 @@ export function saveUserSettings(
     telegramBotToken?: string | null;
     telegramChatId?: string | null;
     kakaoRestApiKey?: string | null;
+    geminiApiKey?: string | null;
     alertedDedupeKeys?: string[];
   }
 ): void {
@@ -1269,18 +1272,20 @@ export function saveUserSettings(
   const updatedToken = settings.telegramBotToken !== undefined ? settings.telegramBotToken : (existing?.telegramBotToken ?? null);
   const updatedChatId = settings.telegramChatId !== undefined ? settings.telegramChatId : (existing?.telegramChatId ?? null);
   const updatedKakaoKey = settings.kakaoRestApiKey !== undefined ? settings.kakaoRestApiKey : (existing?.kakaoRestApiKey ?? null);
+  const updatedGeminiKey = settings.geminiApiKey !== undefined ? settings.geminiApiKey : (existing?.geminiApiKey ?? null);
   const alertedKeysStr = settings.alertedDedupeKeys !== undefined ? JSON.stringify(settings.alertedDedupeKeys) : (existing ? JSON.stringify(existing.alertedDedupeKeys) : "[]");
 
   getPreparedStatement(`
-    INSERT INTO user_settings (email, telegram_bot_token, telegram_chat_id, kakao_rest_api_key, alerted_dedupe_keys, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO user_settings (email, telegram_bot_token, telegram_chat_id, kakao_rest_api_key, gemini_api_key, alerted_dedupe_keys, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(email) DO UPDATE SET
       telegram_bot_token = excluded.telegram_bot_token,
       telegram_chat_id = excluded.telegram_chat_id,
       kakao_rest_api_key = excluded.kakao_rest_api_key,
+      gemini_api_key = excluded.gemini_api_key,
       alerted_dedupe_keys = excluded.alerted_dedupe_keys,
       updated_at = excluded.updated_at
-  `).run(email, updatedToken, updatedChatId, updatedKakaoKey, alertedKeysStr, now);
+  `).run(email, updatedToken, updatedChatId, updatedKakaoKey, updatedGeminiKey, alertedKeysStr, now);
 }
 
 function parseRuleRow(row: any) {

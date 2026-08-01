@@ -43,7 +43,7 @@ const filterCopy = {
     complexPlaceholderWithCode: "단지명 검색 또는 선택",
     complexPlaceholderNoCode: "단지명 키워드 (예: 자이)",
     loadingComplex: "(로딩 중...)",
-    areaLabel: "전용 면적",
+    areaLabel: "분양 면적",
     areaViewPyung: "평 단위 보기",
     areaViewM2: "㎡ 단위 보기",
     areaMinPlaceholderPyung: "최소 평",
@@ -83,7 +83,7 @@ const filterCopy = {
     complexPlaceholderWithCode: "Search or select complex",
     complexPlaceholderNoCode: "Complex keyword (e.g. Xi)",
     loadingComplex: "(Loading...)",
-    areaLabel: "Exclusive Area",
+    areaLabel: "Supply Area",
     areaViewPyung: "View in Pyeong",
     areaViewM2: "View in ㎡",
     areaMinPlaceholderPyung: "Min Pyeong",
@@ -708,7 +708,7 @@ export default function FilterPanel({
             /* 종합 현황 모드 (1줄 콤팩트 레이아웃) */
             <div className="flex flex-col md:flex-row md:items-end gap-3">
               {/* 프리셋 드롭다운 & 지역 검색 */}
-              <div className="flex flex-row items-end gap-2 flex-grow min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-2 flex-grow min-w-0 w-full">
                 {/* 프리셋 셀렉트 박스 */}
                 <div className="flex flex-col gap-1 shrink-0">
                   <label className="text-[11px] font-semibold text-neutral">프리셋</label>
@@ -724,11 +724,13 @@ export default function FilterPanel({
                           handleLoadPreset(val);
                         }
                       }}
-                      className="h-8 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary w-24 md:w-32"
+                      className={`h-8 bg-normal border border-normal rounded-lg px-2.5 py-0 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary w-24 md:w-32 ${
+                        selectedPresetId ? "text-strong" : "text-assistive"
+                      }`}
                     >
-                      <option value="">{t.presetSelectOverview}</option>
+                      <option value="" className="text-assistive">{t.presetSelectOverview}</option>
                       {presets.map((p) => (
-                        <option key={p.id} value={p.id}>
+                        <option key={p.id} value={p.id} className="text-strong font-semibold">
                           {p.name}
                         </option>
                       ))}
@@ -760,7 +762,9 @@ export default function FilterPanel({
                   <button
                     type="button"
                     onClick={() => setShowRegionDropdown(!showRegionDropdown)}
-                    className="w-full h-8 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary text-left flex items-center justify-between"
+                    className={`w-full h-8 bg-normal border border-normal rounded-lg px-2.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary text-left flex items-center justify-between ${
+                      selectedRegions.length > 0 ? "text-strong" : "text-assistive"
+                    }`}
                   >
                     <span className="truncate">{getSelectedRegionsText()}</span>
                     <ChevronDown size={14} className="text-neutral shrink-0 ml-1" />
@@ -842,7 +846,7 @@ export default function FilterPanel({
                       setStartDate(e.target.value);
                       setPeriod('custom');
                     }}
-                    className="h-8 w-full md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="h-8 flex-1 md:flex-initial md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary min-w-0"
                   />
                   <span className="text-assistive font-semibold text-xs">~</span>
                   <input
@@ -852,7 +856,7 @@ export default function FilterPanel({
                       setEndDate(e.target.value);
                       setPeriod('custom');
                     }}
-                    className="h-8 w-full md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="h-8 flex-1 md:flex-initial md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary min-w-0"
                   />
                 </div>
               </div>
@@ -860,11 +864,11 @@ export default function FilterPanel({
               {/* 퀵선택 배지 */}
               <div className="flex flex-col gap-1 shrink-0 w-full md:w-auto">
                 <label className="text-[11px] font-semibold text-neutral">{t.periodQuickSelect}</label>
-                <div className="flex items-center gap-1">
+                <div className="flex w-full sm:w-auto gap-1">
                   <button
                     type="button"
                     onClick={() => handlePeriodBadgeClick(1)}
-                    className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
+                    className={`h-8 px-2.5 flex-1 sm:flex-initial flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                       period === '1year' 
                         ? "bg-primary text-white border-primary" 
                         : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -875,7 +879,7 @@ export default function FilterPanel({
                   <button
                     type="button"
                     onClick={() => handlePeriodBadgeClick(2)}
-                    className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
+                    className={`h-8 px-2.5 flex-1 sm:flex-initial flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                       period === '2year' 
                         ? "bg-primary text-white border-primary" 
                         : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -886,7 +890,7 @@ export default function FilterPanel({
                   <button
                     type="button"
                     onClick={() => handlePeriodBadgeClick(3)}
-                    className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
+                    className={`h-8 px-2.5 flex-1 sm:flex-initial flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                       period === '3year' 
                         ? "bg-primary text-white border-primary" 
                         : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -923,7 +927,7 @@ export default function FilterPanel({
               {/* 1행: 입력 필드 */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 {/* 프리셋 & 지역 검색 */}
-                <div className="flex flex-row items-end gap-2 md:col-span-2">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-2 md:col-span-2 w-full">
                   {/* 프리셋 셀렉트 박스 */}
                   <div className="flex flex-col gap-1 shrink-0">
                     <label className="text-[11px] font-semibold text-neutral">프리셋</label>
@@ -939,11 +943,13 @@ export default function FilterPanel({
                             handleLoadPreset(val);
                           }
                         }}
-                        className="h-8 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary w-24 md:w-32"
+                        className={`h-8 bg-normal border border-normal rounded-lg px-2.5 py-0 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary w-24 md:w-32 ${
+                          selectedPresetId ? "text-strong" : "text-assistive"
+                        }`}
                       >
-                        <option value="">{t.presetSelectAnalysis}</option>
+                        <option value="" className="text-assistive">{t.presetSelectAnalysis}</option>
                         {presets.map((p) => (
-                          <option key={p.id} value={p.id}>
+                          <option key={p.id} value={p.id} className="text-strong font-semibold">
                             {p.name}
                           </option>
                         ))}
@@ -975,7 +981,9 @@ export default function FilterPanel({
                     <button
                       type="button"
                       onClick={() => setShowAnalysisRegionDropdown(!showAnalysisRegionDropdown)}
-                      className="w-full h-8 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary text-left flex items-center justify-between"
+                      className={`w-full h-8 bg-normal border border-normal rounded-lg px-2.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary text-left flex items-center justify-between ${
+                        regionText ? "text-strong" : "text-assistive"
+                      }`}
                     >
                       <span className="truncate">{regionText || "지역 선택 (선택 없음)"}</span>
                       <ChevronDown size={14} className="text-neutral shrink-0 ml-1" />
@@ -1051,7 +1059,7 @@ export default function FilterPanel({
                     }}
                     onBlur={() => setTimeout(() => { setShowSuggestions(false); setActiveIndex(-1); }, 150)}
                     placeholder={filter.lawdCode ? t.complexPlaceholderWithCode : t.complexPlaceholderNoCode}
-                    className="h-8 w-full bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong placeholder-assistive focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="h-8 w-full bg-normal border border-normal rounded-lg px-2.5 text-xs font-semibold text-strong placeholder-assistive focus:outline-none focus:ring-1 focus:ring-primary"
                     autoComplete="off"
                   />
 
@@ -1092,7 +1100,7 @@ export default function FilterPanel({
                       placeholder={usePyung ? t.areaMinPlaceholderPyung : t.areaMinPlaceholderM2}
                       value={usePyung ? toPyung(minArea) : minArea}
                       onChange={(e) => handleAreaChange(e.target.value, "min")}
-                      className="h-8 w-full bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="h-8 flex-1 bg-normal border border-normal rounded-lg px-2.5 text-xs font-semibold text-strong focus:outline-none focus:ring-1 focus:ring-primary min-w-0"
                     />
                     <span className="text-assistive font-semibold text-xs">~</span>
                     <input
@@ -1100,7 +1108,7 @@ export default function FilterPanel({
                       placeholder={usePyung ? t.areaMaxPlaceholderPyung : t.areaMaxPlaceholderM2}
                       value={usePyung ? toPyung(maxArea) : maxArea}
                       onChange={(e) => handleAreaChange(e.target.value, "max")}
-                      className="h-8 w-full bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="h-8 flex-1 bg-normal border border-normal rounded-lg px-2.5 text-xs font-semibold text-strong focus:outline-none focus:ring-1 focus:ring-primary min-w-0"
                     />
                   </div>
                 </div>
@@ -1120,7 +1128,7 @@ export default function FilterPanel({
                           setStartDate(e.target.value);
                           setPeriod('custom');
                         }}
-                        className="h-8 w-full md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="h-8 flex-1 md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary min-w-0"
                       />
                       <span className="text-assistive font-semibold text-xs">~</span>
                       <input
@@ -1130,7 +1138,7 @@ export default function FilterPanel({
                           setEndDate(e.target.value);
                           setPeriod('custom');
                         }}
-                        className="h-8 w-full md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="h-8 flex-1 md:w-32 bg-normal border border-normal rounded-lg px-2.5 py-1.5 text-xs text-strong focus:outline-none focus:ring-1 focus:ring-primary min-w-0"
                       />
                     </div>
                   </div>
@@ -1138,11 +1146,11 @@ export default function FilterPanel({
                   {/* 퀵선택 배지 */}
                   <div className="flex flex-col gap-1 shrink-0 w-full md:w-auto">
                     <label className="text-[11px] font-semibold text-neutral">{t.periodQuickSelect}</label>
-                    <div className="flex items-center gap-1">
+                    <div className="flex w-full sm:w-auto gap-1">
                       <button
                         type="button"
                         onClick={() => handlePeriodBadgeClick(1)}
-                        className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
+                        className={`h-8 px-2.5 flex-1 sm:flex-initial flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                           period === '1year' 
                             ? "bg-primary text-white border-primary" 
                             : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -1153,7 +1161,7 @@ export default function FilterPanel({
                       <button
                         type="button"
                         onClick={() => handlePeriodBadgeClick(2)}
-                        className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
+                        className={`h-8 px-2.5 flex-1 sm:flex-initial flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                           period === '2year' 
                             ? "bg-primary text-white border-primary" 
                             : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"
@@ -1164,7 +1172,7 @@ export default function FilterPanel({
                       <button
                         type="button"
                         onClick={() => handlePeriodBadgeClick(3)}
-                        className={`h-8 px-2.5 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
+                        className={`h-8 px-2.5 flex-1 sm:flex-initial flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors ${
                           period === '3year' 
                             ? "bg-primary text-white border-primary" 
                             : "bg-normal text-neutral border-normal hover:border-primary/50 hover:text-strong"

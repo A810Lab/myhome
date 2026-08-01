@@ -1,6 +1,40 @@
 import { parseRealEstateXml } from "./xmlParser.js";
 import { upsertAreaMapping, getAreaMapping } from "./db.js";
 
+// 서킷 브레이커 설정
+let consecutiveErrors = 0;
+let circuitBrokenUntil: number | null = null;
+const MAX_CONSECUTIVE_ERRORS = 5;
+const CIRCUIT_BREAKER_DURATION = 15 * 60 * 1000; // 15분 동안 차단
+
+function isCircuitBreakerActive(): boolean {
+  if (circuitBrokenUntil && Date.now() < circuitBrokenUntil) {
+    return true;
+  }
+  if (circuitBrokenUntil && Date.now() >= circuitBrokenUntil) {
+    // 차단 시간이 지나면 초기화 (Half-Open 상태 진입 허용)
+    circuitBrokenUntil = null;
+    consecutiveErrors = 0;
+  }
+  return false;
+}
+
+function recordApiError() {
+  consecutiveErrors++;
+  if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+    circuitBrokenUntil = Date.now() + CIRCUIT_BREAKER_DURATION;
+    console.warn(
+      `[AreaMapper] 건축물대장 API 연속 에러 ${consecutiveErrors}회 발생. ` +
+      `${CIRCUIT_BREAKER_DURATION / 60000}분 동안 API 호출을 차단하고 fallback으로 자동 전환합니다.`
+    );
+  }
+}
+
+function recordApiSuccess() {
+  consecutiveErrors = 0;
+  circuitBrokenUntil = null;
+}
+
 // 카카오 로컬 API를 이용해 주소의 10자리 법정동 코드(bCode)를 가져오는 헬퍼
 async function getBCode(addressName: string): Promise<string | null> {
   const apiKey = process.env.KAKAO_REST_API_KEY;
@@ -56,6 +90,13 @@ export async function syncSupplyArea(params: {
   const cached = getAreaMapping(complexId, areaM2);
   if (cached) {
     return cached.supplyAreaM2;
+  }
+
+  // 0.5. 서킷 브레이커 작동 시 즉시 폴백 계산 (카카오 API 및 공공데이터 API 호출 스킵)
+  if (isCircuitBreakerActive()) {
+    const fallbackSupply = Number((areaM2 / 0.78).toFixed(2));
+    upsertAreaMapping(complexId, areaM2, fallbackSupply, "fallback");
+    return fallbackSupply;
   }
 
   // 1. 카카오 API를 활용해 법정동 코드 조회 시도
@@ -163,13 +204,18 @@ export async function syncSupplyArea(params: {
       // 산출된 전용률이 정상 범주(60% ~ 90%)인 경우에만 실측 데이터로 채택
       if (ratio >= 0.6 && ratio <= 0.9) {
         upsertAreaMapping(complexId, areaM2, supplyArea, "api");
+        recordApiSuccess();
         return supplyArea;
       }
     }
+    
+    // 매칭 데이터가 없거나 전용률이 비정상이어도 API 호출 자체는 성공했으므로 리셋
+    recordApiSuccess();
   } catch (err: any) {
     const isServerErr = err.message?.includes("500") || err.message?.includes("Unexpected errors");
     const errMsg = isServerErr ? `${err.message} (공공데이터포털 서버 장애 - 폴백 적용)` : err.message;
     console.warn(`[AreaMapper] 건축물대장 API 연동 실패 (${complexName}, ${areaM2}㎡):`, errMsg);
+    recordApiError();
   }
 
   // API 연동에 실패하거나 전용률이 비정상적인 경우 폴백 적용

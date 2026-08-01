@@ -138,7 +138,7 @@ export default function GraphDashboard({ onNavigateToRules, onSelectComplex, con
       />
 
       {/* Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 gap-2 pb-px overflow-visible">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 dark:border-slate-800 gap-2 pb-px overflow-visible">
         {/* Desktop Underline Tabs */}
         <div className="hidden md:flex gap-1">
           {tabs.map((tab) => {
@@ -187,7 +187,7 @@ export default function GraphDashboard({ onNavigateToRules, onSelectComplex, con
 
         {/* 면적 구분(분양/전용) 및 단위 토글 버튼 */}
         {activeTab === "overview" && (
-          <div className="flex items-center gap-2 shrink-0 mr-1 mb-1">
+          <div className="flex items-center gap-2 shrink-0 mr-1 mb-1 justify-end w-full sm:w-auto mt-2 sm:mt-0">
             {/* 분양 / 전용 탭 */}
             <div className="flex items-center gap-0.5 rounded-lg border border-slate-200 dark:border-slate-800 p-0.5 bg-slate-50 dark:bg-slate-900">
               <button
@@ -196,7 +196,7 @@ export default function GraphDashboard({ onNavigateToRules, onSelectComplex, con
                 className={classNames(
                   "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
                   areaType === "supply"
-                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    ? "bg-primary text-white"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
               >
@@ -208,7 +208,7 @@ export default function GraphDashboard({ onNavigateToRules, onSelectComplex, con
                 className={classNames(
                   "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
                   areaType === "dedicated"
-                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    ? "bg-primary text-white"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
               >
@@ -224,7 +224,7 @@ export default function GraphDashboard({ onNavigateToRules, onSelectComplex, con
                 className={classNames(
                   "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
                   areaUnit === "pyeong"
-                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    ? "bg-primary text-white"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
               >
@@ -236,7 +236,7 @@ export default function GraphDashboard({ onNavigateToRules, onSelectComplex, con
                 className={classNames(
                   "rounded-md px-2 py-1 text-[10px] font-bold transition-colors",
                   areaUnit === "m2"
-                    ? "bg-primary-600 text-white dark:bg-primary-500"
+                    ? "bg-primary text-white"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
                 )}
               >

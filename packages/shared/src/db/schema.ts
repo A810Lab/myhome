@@ -63,6 +63,7 @@ export function initDb(): void {
       telegram_bot_token TEXT,
       telegram_chat_id TEXT,
       kakao_rest_api_key TEXT,
+      gemini_api_key TEXT,
       alerted_dedupe_keys TEXT DEFAULT '[]',
       updated_at TEXT NOT NULL
     );
@@ -223,6 +224,9 @@ export function initDb(): void {
   }
   if (!userSettingsColNames.has('is_temporary_password')) {
     db.exec('ALTER TABLE user_settings ADD COLUMN is_temporary_password INTEGER DEFAULT 0');
+  }
+  if (!userSettingsColNames.has('gemini_api_key')) {
+    db.exec('ALTER TABLE user_settings ADD COLUMN gemini_api_key TEXT');
   }
 
   // -- sessions 테이블 login_method 컬럼 마이그레이션 (기존 DB 호환)

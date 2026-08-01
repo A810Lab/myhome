@@ -1,8 +1,19 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getSystemConfig } from "./storage.js";
 import { Config } from "./config.js";
+import { getUserSettings } from "@myhome/shared";
 
-async function getApiKey(): Promise<string> {
+async function getApiKey(userEmail?: string): Promise<string> {
+  if (userEmail) {
+    try {
+      const userSettings = getUserSettings(userEmail);
+      if (userSettings?.geminiApiKey) {
+        return userSettings.geminiApiKey;
+      }
+    } catch (error) {
+      console.error("Failed to read user config for Gemini API key:", error);
+    }
+  }
   try {
     const config = await getSystemConfig();
     if (config.geminiApiKey) {
@@ -14,10 +25,10 @@ async function getApiKey(): Promise<string> {
   return Config.GEMINI_API_KEY || "";
 }
 
-export async function generateTextWithGemini(prompt: string): Promise<string> {
-  const apiKey = await getApiKey();
+export async function generateTextWithGemini(prompt: string, userEmail?: string): Promise<string> {
+  const apiKey = await getApiKey(userEmail);
   if (!apiKey) {
-    throw new Error("Gemini API key is not configured. Please set it in System Settings or via GEMINI_API_KEY environment variable.");
+    throw new Error("Gemini API key is not configured. Please set it in Settings or via GEMINI_API_KEY environment variable.");
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);

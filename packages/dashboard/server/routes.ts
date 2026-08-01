@@ -80,9 +80,15 @@ export function createRouter() {
     res.json({ ok: true });
   });
 
-  router.get("/config", async (_req, res, next) => {
+  router.get("/config", async (req, res, next) => {
     try {
       const config = await getSystemConfig();
+      let userGeminiConfigured = false;
+      const userEmail = req.user?.email;
+      if (userEmail) {
+        const userSettings = getUserSettings(userEmail);
+        userGeminiConfigured = Boolean(userSettings?.geminiApiKey);
+      }
       res.json({
         telegramConfigured: isTelegramConfigured(),
         kakaoStatus: "phase-2",
@@ -94,7 +100,7 @@ export function createRouter() {
         kakaoJavascriptKey: Config.KAKAO_JAVASCRIPT_KEY || "",
         kakaoNativeAppConfigured: Boolean(Config.KAKAO_NATIVE_APP_KEY),
         dataSourceNotice: getSourceLimitNotice(),
-        geminiConfigured: Boolean(config.geminiApiKey || Config.GEMINI_API_KEY)
+        geminiConfigured: Boolean(config.geminiApiKey || Config.GEMINI_API_KEY || userGeminiConfigured)
       });
     } catch (err) {
       next(err);
@@ -593,6 +599,7 @@ export function createRouter() {
         telegramBotToken: maskSecret(settings?.telegramBotToken),
         telegramChatId: maskSecret(settings?.telegramChatId),
         kakaoRestApiKey: maskSecret(settings?.kakaoRestApiKey),
+        geminiApiKey: maskSecret(settings?.geminiApiKey),
       });
     } catch (error) {
       next(error);
@@ -604,7 +611,7 @@ export function createRouter() {
       const email = getAuthenticatedEmail(req, res);
       if (!email) return;
       const body = req.body;
-      const update: { telegramBotToken?: string | null; telegramChatId?: string | null; kakaoRestApiKey?: string | null } = {};
+      const update: { telegramBotToken?: string | null; telegramChatId?: string | null; kakaoRestApiKey?: string | null; geminiApiKey?: string | null } = {};
 
       const telegramBotToken = getUpdatedSecret(body.telegramBotToken);
       if (telegramBotToken !== undefined) update.telegramBotToken = telegramBotToken;
@@ -614,6 +621,9 @@ export function createRouter() {
 
       const kakaoRestApiKey = getUpdatedSecret(body.kakaoRestApiKey);
       if (kakaoRestApiKey !== undefined) update.kakaoRestApiKey = kakaoRestApiKey;
+
+      const geminiApiKey = getUpdatedSecret(body.geminiApiKey);
+      if (geminiApiKey !== undefined) update.geminiApiKey = geminiApiKey;
 
       saveUserSettings(email, update);
       res.json({ ok: true });

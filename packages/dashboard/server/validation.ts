@@ -99,6 +99,7 @@ export const userConfigUpdateSchema = z.object({
   telegramBotToken: z.string().optional().nullable(),
   telegramChatId: z.string().optional().nullable(),
   kakaoRestApiKey: z.string().optional().nullable(),
+  geminiApiKey: z.string().optional().nullable(),
 });
 export const logEntrySchema = z.object({
   activityType: z.string().min(1),

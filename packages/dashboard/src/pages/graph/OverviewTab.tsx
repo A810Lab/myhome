@@ -965,7 +965,7 @@ export default function OverviewTab({
   ] as const;
 
   const chartFilterSelectors = (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
       {/* 지역구 선택 다운리스트 */}
       <select
         value={selectedRegion}
@@ -980,7 +980,7 @@ export default function OverviewTab({
       </select>
 
       {/* 평형대 필터 */}
-      <div className="flex items-center gap-0.5 rounded-lg bg-alternative p-0.5 border border-normal">
+      <div className="flex flex-wrap items-center gap-0.5 rounded-lg bg-alternative p-0.5 border border-normal">
         {sizeOptions.map((opt) => (
           <button
             key={opt.key}
