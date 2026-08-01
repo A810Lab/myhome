@@ -81,7 +81,22 @@ export async function upsertTransactionBatch(
   db.exec("BEGIN TRANSACTION");
   try {
     // region은 배치 전체에 공통 → 1번만 upsert
-    regionStmt.run(region.lawdCode, region.displayName, now);
+    let finalDisplayName = region.displayName;
+    try {
+      const existing = db.prepare("SELECT display_name FROM regions WHERE lawd_code = ?").get(region.lawdCode) as { display_name: string } | undefined;
+      if (existing && existing.display_name) {
+        const existingHasSpace = existing.display_name.trim().includes(" ");
+        const incomingHasSpace = region.displayName.trim().includes(" ");
+        // 기존 이름은 정형화되어 있는데(공백 존재), 들어온 이름은 단편적이면(공백 없음) 기존 이름을 유지
+        if (existingHasSpace && !incomingHasSpace) {
+          finalDisplayName = existing.display_name;
+        }
+      }
+    } catch (dbErr) {
+      console.warn(`[db] regions 조회 실패 (기본 이름 사용):`, dbErr);
+    }
+
+    regionStmt.run(region.lawdCode, finalDisplayName, now);
 
     for (const { complexName, tx, addressInfo } of items) {
       const complexId = `${region.lawdCode}|${complexName}`;

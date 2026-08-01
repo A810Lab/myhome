@@ -177,11 +177,10 @@ function RuleForm({
   }, [lawdCode, resolvedRegionName]);
 
   function selectRegion(item: RegionSearchResult) {
-    // 사용자가 입력한 regionName을 덮어쓰지 않음
-    // lawdCode만 저장하고, 표시용 이름은 연동 배지로 표시
+    // 저장 시 정합성을 위해 사용자가 입력한 regionName도 검색된 정식 displayName으로 덮어씀
     setLawdCode(item.lawdCode);
     setResolvedRegionName(item.displayName);
-    setForm(prev => ({ ...prev, regionCode: item.lawdCode }));
+    setForm(prev => ({ ...prev, regionName: item.displayName, regionCode: item.lawdCode }));
     setError("");
     setStep(2);
   }
@@ -196,7 +195,8 @@ function RuleForm({
         const bestMatch = results[0];
         setLawdCode(bestMatch.lawdCode);
         setResolvedRegionName(bestMatch.displayName);
-        setForm(prev => ({ ...prev, regionCode: bestMatch.lawdCode }));
+        // 저장 시 정합성을 위해 form.regionName도 검색된 정식 displayName으로 덮어씀
+        setForm(prev => ({ ...prev, regionName: bestMatch.displayName, regionCode: bestMatch.lawdCode }));
         setStep(2);
       } else {
         setError("검색된 지역이 없습니다. 정확한 구/군 이름을 입력해 주세요.");

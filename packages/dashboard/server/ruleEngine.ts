@@ -44,18 +44,47 @@ export async function runRuleCheck(rule: WatchRule): Promise<RuleCheckOutcome> {
   const email = (rule as any).userEmail || "bootstrap-admin@myhome.local";
   const settings = getUserSettings(email);
   let region: { lawdCode: string; displayName: string; raw: null };
+  let needsNameCorrection = false;
+
   if (rule.regionCode) {
+    // 룰에 등록된 regionName이 공백이 없는 단편적인 단어(예: 분당, 서초구)인지 검사
+    const isFragmentName = !rule.regionName.trim().includes(" ");
+    if (isFragmentName) {
+      needsNameCorrection = true;
+    }
     region = { lawdCode: rule.regionCode, displayName: rule.regionName, raw: null };
   } else {
-    const candidates = await searchAddresses(rule.regionName);
-    if (candidates.length === 0) {
-      throw new Error(`지역코드를 찾지 못했습니다: ${rule.regionName}`);
-    }
-    region = { lawdCode: candidates[0].lawdCode, displayName: candidates[0].displayName, raw: null };
+    needsNameCorrection = true;
+    region = { lawdCode: "", displayName: rule.regionName, raw: null };
   }
 
-  if (!rule.regionCode || rule.regionCode !== region.lawdCode) {
-    await updateRulePatch(rule.id, { regionCode: region.lawdCode }, email);
+  if (needsNameCorrection) {
+    try {
+      const candidates = await searchAddresses(rule.regionName);
+      if (candidates.length > 0) {
+        region = {
+          lawdCode: candidates[0].lawdCode,
+          displayName: candidates[0].displayName,
+          raw: null
+        };
+      } else if (!rule.regionCode) {
+        throw new Error(`지역코드를 찾지 못했습니다: ${rule.regionName}`);
+      }
+    } catch (err: any) {
+      if (!rule.regionCode) {
+        throw err;
+      }
+      console.warn(`[ruleEngine] 지역 이름 보정 실패 (기존 정보 유지): ${err.message}`);
+    }
+  }
+
+  // 룰 정보 보정 (지역코드 불일치 또는 명칭이 정형화된 이름으로 교정된 경우)
+  if (!rule.regionCode || rule.regionCode !== region.lawdCode || rule.regionName !== region.displayName) {
+    await updateRulePatch(
+      rule.id,
+      { regionCode: region.lawdCode, regionName: region.displayName },
+      email
+    );
   }
 
   const targetMonths = recentMonths(TRACKED_MONTHS);
